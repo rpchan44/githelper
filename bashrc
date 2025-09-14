@@ -518,7 +518,7 @@ githelp() {
     echo -e "\n\e[1;32m🌱 Git Helper Commands\e[0m\n"
 
     echo -e "\e[1;32m[ Create / Status / Stage / Commit / Push ]\e[0m"
-    echo -e "  \e[1;36mgbc\e[0m      → Clone Repository e.g https://github.com/rpchan44/git-bashrc"
+    echo -e "  \e[1;36mgbc\e[0m      → Clone Repository e.g https://github.com/your_handle/your_repository_name"
     echo -e "  \e[1;36mgbn\e[0m      → Create new branch with optional prefix (default: feat)"
     echo -e "  \e[1;36mgbs\e[0m      → Branch Status"
     echo -e "  \e[1;36mga\e[0m       → Stage files"

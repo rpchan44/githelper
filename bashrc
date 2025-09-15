@@ -1,7 +1,8 @@
 # ================================
 # 🌱 Git Bash Helper Aliases & Functions
 # ================================
-
+# --- WORKFLOW ---
+alias gflow="workflow"
 # --- Git Basics ---
 alias gbn='gnew'
 alias gbs='echo Branch Status; git status'
@@ -57,11 +58,6 @@ cdmenu() {
     done
 }
 
-echo "CD to your GIT workspace"
-cd ~/Desktop/GIT/ 2>/dev/null
-cdmenu
-echo "ghelp - for additional helper functions"
-
 # ================================
 # 🌐 Remote Repo Helpers
 # ================================
@@ -78,6 +74,14 @@ setremote() {
     git remote -v
 }
 
+workflow() { 
+    echo "-=-=-=-=-=-=-=-=-=-=-GIT WORKFLOW=-=-=-=-=-=-=-=-=-="
+    echo -e "THIS IS APPLICABLE ONLY FOR A REPOSITORY THAT'S ALREADY EXISTED ON YOUR LOCAL COMPUTER\n"
+    echo "Before creating a feature branch out of main branch of a specific repository issue gco -p main"
+    echo -e "This will allows you to update the main repository code before you make your own branch this is very important\n"
+    echo -e "e.g run\ngco -p main; gbn HELP-123\n"
+    echo -e "Under the hood this will make a git pull on the main branch of that repository and create a branch name feat/HELP-123\n"
+}
 pushup() {
     local remote_name=${1:-origin}
     local branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD)
@@ -517,7 +521,10 @@ ghelp() {
 githelp() {
     echo -e "\n\e[1;32m🌱 Git Helper Commands\e[0m\n"
 
-    echo -e "\e[1;32m[ Create / Status / Stage / Commit / Push ]\e[0m"
+    echo -e "\e[1;32m[ GitWork Flow (README) ]\e[0m"
+    echo -e "  \e[1;36mgflow\e[0m    → Show basic git workflow"
+
+    echo -e "\n\e[1;32m[ Create / Status / Stage / Commit / Push ]\e[0m"
     echo -e "  \e[1;36mgbc\e[0m      → Clone Repository e.g https://github.com/your_handle/your_repository_name"
     echo -e "  \e[1;36mgbn\e[0m      → Create new branch with optional prefix (default: feat)"
     echo -e "  \e[1;36mgbs\e[0m      → Branch Status"
@@ -677,3 +684,10 @@ _git_folder_completion() {
     COMPREPLY=( $(compgen -W "${dirs}" -- "$cur") )
 }
 complete -F _git_folder_completion ghcreate
+
+REPO="$HOME/desktop/GIT"
+echo "CD to your GIT workspace"
+cd "$REPO" 2>/dev/null
+cdmenu
+echo "ghelp - for additional helper functions"
+

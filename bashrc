@@ -1,6 +1,9 @@
 # ================================
 # 🌱 Git Bash Helper Aliases & Functions
 # ================================
+if [ -f ~/.git-completion.bash ]; then
+        . ~/.git-completion.bash
+fi
 # --- WORKFLOW ---
 alias gflow="workflow"
 # --- Git Basics ---

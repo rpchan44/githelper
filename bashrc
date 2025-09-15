@@ -21,6 +21,14 @@ alias gsh='echo Show latest commit details; git show HEAD'
 alias gd='echo Diff unstaged changes; git diff'
 alias gds='echo Diff staged changes; git diff --staged'
 
+# --- Git Blame Aliases ---
+alias gbl='gblame'          # full file blame
+alias gbln='gblame_line'    # blame specific line
+alias gbls='gblame_show'    # show commit for line
+alias glh='gline_history'   # line history
+alias gblr='gblame_recent'  # blame last N commits
+
+
 # --- Branch Management ---
 alias gbc="echo Cloning Repository; git clone "
 alias gcomp="gacp"
@@ -92,6 +100,44 @@ pushup() {
     echo "Pushing branch '$branch' to remote '$remote_name'"
     git push -u "$remote_name" "$branch"
 }
+
+# ================================
+# 🔎 Git Blame & History Helpers
+# ================================
+gblame() {
+    local file=$1
+    [ -z "$file" ] && { echo "Usage: gblame <file>"; return 1; }
+    git blame "$file"
+}
+
+gblame_line() {
+    local file=$1 line=$2
+    [ -z "$file" ] || [ -z "$line" ] && { echo "Usage: gblame_line <file> <line>"; return 1; }
+    git blame -L "$line","$line" "$file"
+}
+
+gblame_show() {
+    local file=$1 line=$2
+    [ -z "$file" ] || [ -z "$line" ] && { echo "Usage: gblame_show <file> <line>"; return 1; }
+    local commit=$(git blame -L "$line","$line" --porcelain "$file" | awk '/^commit/ {print $2}')
+    echo "🔎 Commit for $file line $line: $commit"
+    git show "$commit"
+}
+
+gline_history() {
+    local file=$1 line=$2
+    [ -z "$file" ] || [ -z "$line" ] && { echo "Usage: gline_history <file> <line>"; return 1; }
+    git log -L "$line","$line":"$file"
+}
+
+gblame_recent() {
+    local file=$1 count=${2:-5}
+    [ -z "$file" ] && { echo "Usage: gblame_recent <file> [N_commits]"; return 1; }
+    local range="HEAD~$count..HEAD"
+    echo "🔎 Blaming $file for last $count commits ($range)"
+    git blame "$range" -- "$file"
+}
+
 
 ghcreate() {
     local repo_name visibility url
@@ -542,6 +588,14 @@ githelp() {
     echo -e "  \e[1;36mgsh\e[0m      → Show latest commit details"
     echo -e "  \e[1;36mgd\e[0m       → Diff unstaged changes"
     echo -e "  \e[1;36mgds\e[0m      → Diff staged changes"
+
+    echo -e "\n\e[1;32m[ Blame / File History ]\e[0m"
+    echo -e "  \e[1;36mgblame <file>\e[0m         → Show blame for file"
+    echo -e "  \e[1;36mgblame_line <f> <line>\e[0m → Show blame for specific line"
+    echo -e "  \e[1;36mgblame_show <f> <line>\e[0m → Show commit that changed line"
+    echo -e "  \e[1;36mgline_history <f> <line>\e[0m → Show history of a line"
+    echo -e "  \e[1;36mgblame_recent <f> [N]\e[0m  → Blame limited to last N commits (default 5)"
+
 
     echo -e "\n\e[1;32m[ Branch Management ]\e[0m"
     echo -e "  \e[1;36mgman\e[0m     → Branch Management"

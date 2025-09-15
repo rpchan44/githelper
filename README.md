@@ -8,8 +8,8 @@ Note: Please go to end of the line and replace REPO variable to reflect your mai
 
 # Installation
 
-cp git-completion.bash ~/.git-completion.bash
-cp bashrc ~/.bashrc
+cp git-completion.bash ~/.git-completion.bash</br>
+cp bashrc ~/.bashrc</br>
 source ~/.bashrc
 
 ![Alt text](images/1-out-of-2.png)

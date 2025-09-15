@@ -10,6 +10,7 @@ Note: Please go to end of the line and replace REPO variable to reflect your mai
 
 cp git-completion.bash ~/.git-completion.bash</br>
 cp bashrc ~/.bashrc</br>
+cp vimrc ~/.vimrc # optional </br>
 source ~/.bashrc
 
 ![Alt text](images/1-out-of-2.png)

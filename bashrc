@@ -106,7 +106,7 @@ pushup() {
 # Usage: gcopy <source> <destination>
 # ========================================
 
-gcopy() {
+gcpy() {
     if ! git rev-parse --show-toplevel &>/dev/null; then
         echo "Not inside a Git repository"
         return 1
@@ -115,28 +115,39 @@ gcopy() {
     local repo_root
     repo_root=$(git rev-parse --show-toplevel)
 
-    local src="$1"
-    local dest="$2"
+    # Destination = last arg, Sources = all before
+    local dest="${@: -1}"
+    local sources=("${@:1:$#-1}")
 
-    if [[ -z "$src" || -z "$dest" ]]; then
-        echo "Usage: gcpy <source> <destination>"
+    if [[ ${#sources[@]} -eq 0 ]]; then
+        echo "Usage: gcpy <source...> <destination>"
         return 1
     fi
 
-    # Resolve absolute paths
-    local abs_src=$(realpath "$src" 2>/dev/null)
-    local abs_dest=$(realpath -m "$dest" 2>/dev/null)
+    # Expand and validate sources
+    for src in "${sources[@]}"; do
+        for f in $src; do
+            local abs_src
+            abs_src=$(realpath "$f" 2>/dev/null)
+            if [[ "$abs_src" != $repo_root/* ]]; then
+                echo "Blocked: '$f' is outside repo root"
+                return 1
+            fi
+        done
+    done
 
-    # Ensure both are inside repo
-    if [[ "$abs_src" != $repo_root/* || "$abs_dest" != $repo_root/* ]]; then
-        echo "Copy blocked: source or destination outside Git branch workspace"
+    # Validate destination
+    local abs_dest
+    abs_dest=$(realpath -m "$dest" 2>/dev/null)
+    if [[ "$abs_dest" != $repo_root/* ]]; then
+        echo "Blocked: destination '$dest' is outside repo root"
         return 1
     fi
 
-    # Perform the copy
-    cp -r "$src" "$dest" && echo "Copied '$src' → '$dest' inside branch"
+    # Copy files
+    cp -r "${sources[@]}" "$dest" && \
+        echo "✅ Copied ${sources[*]} → $dest"
 }
-
 
 # ================================
 #  Git Blame & History Helpers

@@ -46,7 +46,7 @@ alias gundoall='echo Undo last commit and discard changes; git reset --hard HEAD
 
 # --- File Tracking ---
 alias guntrack='echo Stop tracking file but keep locally; git rm --cached'
-
+alias gcpy='gcopy'
 # --- Stash Helpers ---
 alias gstash='echo Saving changes to stash; git stash push -u'
 alias gstashm='echo Saving changes to stash with message; git stash push -u -m'
@@ -100,6 +100,43 @@ pushup() {
     echo "Pushing branch '$branch' to remote '$remote_name'"
     git push -u "$remote_name" "$branch"
 }
+
+# ========================================
+# Copy files within current Git branch
+# Usage: gcopy <source> <destination>
+# ========================================
+
+gcopy() {
+    if ! git rev-parse --show-toplevel &>/dev/null; then
+        echo "Not inside a Git repository"
+        return 1
+    fi
+
+    local repo_root
+    repo_root=$(git rev-parse --show-toplevel)
+
+    local src="$1"
+    local dest="$2"
+
+    if [[ -z "$src" || -z "$dest" ]]; then
+        echo "Usage: gcpy <source> <destination>"
+        return 1
+    fi
+
+    # Resolve absolute paths
+    local abs_src=$(realpath "$src" 2>/dev/null)
+    local abs_dest=$(realpath -m "$dest" 2>/dev/null)
+
+    # Ensure both are inside repo
+    if [[ "$abs_src" != $repo_root/* || "$abs_dest" != $repo_root/* ]]; then
+        echo "Copy blocked: source or destination outside Git branch workspace"
+        return 1
+    fi
+
+    # Perform the copy
+    cp -r "$src" "$dest" && echo "Copied '$src' → '$dest' inside branch"
+}
+
 
 # ================================
 #  Git Blame & History Helpers
@@ -626,6 +663,7 @@ githelp() {
 
     echo -e "\n\e[1;32m[ File Tracking ]\e[0m"
     echo -e "  \e[1;36mguntrack\e[0m  Stop tracking file but keep locally"
+    echo -e "  \e[1;36mgcpy\e[0m      Copying files/asset within the branch"
 
     echo -e "\n\e[1;32m[ Remote / Upstream Helper ]\e[0m"
     echo -e "  \e[1;36msetremote\e[0m  Add or update a remote URL"

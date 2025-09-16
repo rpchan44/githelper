@@ -1,5 +1,5 @@
 # ================================
-# 🌱 Git Bash Helper Aliases & Functions
+#  Git Bash Helper Aliases & Functions
 # ================================
 if [ -f ~/.git-completion.bash ]; then
         . ~/.git-completion.bash
@@ -57,7 +57,7 @@ alias gstashd='echo Dropping stash by ID; git stash drop'
 
 
 # ================================
-# 📂 Directory Menu Helper
+#  Directory Menu Helper
 # ================================
 cdmenu() {
     dirs=(*/)
@@ -70,7 +70,7 @@ cdmenu() {
 }
 
 # ================================
-# 🌐 Remote Repo Helpers
+#  Remote Repo Helpers
 # ================================
 setremote() {
     [ $# -ne 2 ] && { echo "Usage: setremote <remote_name> <url>"; return 1; }
@@ -102,7 +102,7 @@ pushup() {
 }
 
 # ================================
-# 🔎 Git Blame & History Helpers
+#  Git Blame & History Helpers
 # ================================
 gblame() {
     local file=$1
@@ -120,7 +120,7 @@ gblame_show() {
     local file=$1 line=$2
     [ -z "$file" ] || [ -z "$line" ] && { echo "Usage: gblame_show <file> <line>"; return 1; }
     local commit=$(git blame -L "$line","$line" --porcelain "$file" | awk '/^commit/ {print $2}')
-    echo "🔎 Commit for $file line $line: $commit"
+    echo " Commit for $file line $line: $commit"
     git show "$commit"
 }
 
@@ -134,7 +134,7 @@ gblame_recent() {
     local file=$1 count=${2:-5}
     [ -z "$file" ] && { echo "Usage: gblame_recent <file> [N_commits]"; return 1; }
     local range="HEAD~$count..HEAD"
-    echo "🔎 Blaming $file for last $count commits ($range)"
+    echo " Blaming $file for last $count commits ($range)"
     git blame "$range" -- "$file"
 }
 
@@ -170,16 +170,16 @@ ghcreate() {
 remoteinfo() {
     branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD)
     [ -z "$branch" ] && { echo "Not on a branch"; return 1; }
-    echo -e "\n📌 Current branch: $branch"
+    echo -e "\n Current branch: $branch"
     upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null)
     [ -n "$upstream" ] && echo "Tracking upstream: $upstream" || echo "No upstream set for this branch"
-    echo -e "\n🌐 Remote repositories:"
+    echo -e "\n Remote repositories:"
     git remote -v
     echo
 }
 
 # ================================
-# 🎨 Enhanced Git-Aware Prompt
+#  Enhanced Git-Aware Prompt
 # ================================
 parse_git_status() {
     branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
@@ -190,19 +190,19 @@ parse_git_status() {
     untracked=$(git ls-files --others --exclude-standard 2>/dev/null | wc -l)
     dirty=""
 
-    [ "${staged:-0}" -gt 0 ] && dirty+="●"
-    [ "${unstaged:-0}" -gt 0 ] && dirty+="✗"
-    [ "${untracked:-0}" -gt 0 ] && dirty+="…"
-    [ -z "$dirty" ] && dirty="✔"
+    [ "${staged:-0}" -gt 0 ] && dirty+="+"
+    [ "${unstaged:-0}" -gt 0 ] && dirty+="..."
+    [ "${untracked:-0}" -gt 0 ] && dirty+="-"
+    [ -z "$dirty" ] && dirty="OK"
 
     ahead=$(git rev-list --count --left-only @{u}...HEAD 2>/dev/null || echo 0)
     behind=$(git rev-list --count --right-only @{u}...HEAD 2>/dev/null || echo 0)
     ab=""
 
-    [ "${ahead:-0}" -gt 0 ] && ab+="↑$ahead"
-    [ "${behind:-0}" -gt 0 ] && ab+="↓$behind"
+    [ "${ahead:-0}" -gt 0 ] && ab+="-->$ahead"
+    [ "${behind:-0}" -gt 0 ] && ab+="<--$behind"
 
-    echo " $branch $dirty $ab"
+    echo " $branch $dirty $ab"
 }
 
 GREEN="\[\e[1;32m\]"
@@ -210,7 +210,7 @@ YELLOW="\[\e[1;33m\]"
 BLUE="\[\e[1;34m\]"
 RESET="\[\e[0m\]"
 
-export PS1="$GREEN\u@\h $BLUE\w $YELLOW\$(parse_git_status)$RESET ➜ "
+export PS1="$GREEN\u@\h $BLUE\w $YELLOW\$(parse_git_status)$RESET  "
 gbmanage() {
     local action=$1 target=$2 branch=$3 newname=$4
     local RED="\033[0;31m" GREEN="\033[0;32m" YELLOW="\033[1;33m" RESET="\033[0m"
@@ -236,11 +236,11 @@ gbmanage() {
         list)
             case "$target" in
                 local)
-                    echo -e "${GREEN}📂 Local branches:${RESET}"
+                    echo -e "${GREEN} Local branches:${RESET}"
                     git branch --format="%(refname:short)" | sed "s/^/  - /"
                     ;;
                 remote)
-                    echo -e "${GREEN}🌐 Remote branches:${RESET}"
+                    echo -e "${GREEN} Remote branches:${RESET}"
                     git for-each-ref --format="%(refname:short)" refs/remotes/ \
                         | sed "s/^/  - /"
                     ;;
@@ -294,11 +294,11 @@ gbmanage() {
                     echo -e "${RED}Local branch '$branch' does not exist.${RESET}"
                     return 1
                 fi
-                echo -e "${YELLOW}Rename local branch '$branch' → '$newname'? (y/N)${RESET}"
+                echo -e "${YELLOW}Rename local branch '$branch'  '$newname'? (y/N)${RESET}"
                 read -r ans
                 if [[ "$ans" =~ ^[Yy]$ ]]; then
                     git branch -m "$branch" "$newname"
-                    echo -e "${GREEN}Renamed local branch '$branch' → '$newname'.${RESET}"
+                    echo -e "${GREEN}Renamed local branch '$branch'  '$newname'.${RESET}"
                 fi
             elif [[ "$target" == "remote" ]]; then
                 local remote=$(git remote | head -n1)
@@ -310,12 +310,12 @@ gbmanage() {
                     echo -e "${RED}Remote branch '$branch' not found on '$remote'.${RESET}"
                     return 1
                 fi
-                echo -e "${YELLOW}Rename remote branch '$branch' → '$newname' on '$remote'? (y/N)${RESET}"
+                echo -e "${YELLOW}Rename remote branch '$branch'  '$newname' on '$remote'? (y/N)${RESET}"
                 read -r ans
                 if [[ "$ans" =~ ^[Yy]$ ]]; then
                     git push "$remote" "$branch:$newname"
                     git push "$remote" --delete "$branch"
-                    echo -e "${GREEN}Renamed remote branch '$branch' → '$newname' on '$remote'.${RESET}"
+                    echo -e "${GREEN}Renamed remote branch '$branch'  '$newname' on '$remote'.${RESET}"
                 fi
             else
                 echo -e "${RED}Invalid target. Use 'local' or 'remote'.${RESET}"
@@ -368,7 +368,7 @@ gnew() {
 }
 
 # ================================
-# 🛠 Branch Checkout Helpers
+#  Branch Checkout Helpers
 # ================================
 gco() {
     local flag_p=0
@@ -410,7 +410,7 @@ gacp() {
     # Get current branch
     branch=$(git symbolic-ref --short HEAD 2>/dev/null)
     if [ -z "$branch" ]; then
-        echo "❌ Not on a branch"
+        echo " Not on a branch"
         return 1
     fi
 
@@ -433,13 +433,13 @@ gacp() {
     # Final commit message
     commit_msg="${type}: ${ticket} - ${msg}"
 
-    echo "📦 Adding all files..."
+    echo " Adding all files..."
     git add .
 
-    echo "📝 Committing: $commit_msg"
+    echo " Committing: $commit_msg"
     git commit -m "$commit_msg"
 
-    echo "⬆️  Pushing branch: $branch"
+    echo "  Pushing branch: $branch"
     git push -u origin "$branch"
 }
 
@@ -459,7 +459,7 @@ gcb() {
 }
 
 # ================================
-# 📝 Commit with branch prefix
+#  Commit with branch prefix
 # ================================
 gc_branch_prefix() {
 
@@ -488,7 +488,7 @@ gc_branch_prefix() {
 }
 
 # ================================
-# 🔄 Rebase onto any branch
+#  Rebase onto any branch
 # ================================
 grebase() {
     local target="${1:-main}"
@@ -520,7 +520,7 @@ pushforce() {
     branch=$(git symbolic-ref --short HEAD 2>/dev/null)
     [ -z "$branch" ] && { echo "Not on a branch"; return 1; }
 
-    echo "⚠️ WARNING: This will overwrite remote branch '$branch' on '$remote_name'"
+    echo " WARNING: This will overwrite remote branch '$branch' on '$remote_name'"
     echo "Do you want to continue? [y/N]"
     read -r answer
     case "$answer" in
@@ -529,7 +529,7 @@ pushforce() {
                 echo "Force push failed"
                 return 1
             }
-            echo "✅ Force-pushed '$branch' to '$remote_name'"
+            echo " Force-pushed '$branch' to '$remote_name'"
             ;;
         * )
             echo "Aborted"
@@ -545,14 +545,14 @@ syncforce() {
     branch=$(git symbolic-ref --short HEAD 2>/dev/null)
     [ -z "$branch" ] && { echo "Not on a branch"; return 1; }
 
-    echo "⚠️ WARNING: This will overwrite your local branch '$branch' to match '$remote_name/$branch'"
+    echo " WARNING: This will overwrite your local branch '$branch' to match '$remote_name/$branch'"
     echo "Do you want to continue? [y/N]"
     read -r answer
     case "$answer" in
         [Yy]* )
             git fetch "$remote_name" || { echo "Fetch failed"; return 1; }
             git reset --hard "$remote_name/$branch" || { echo "Reset failed"; return 1; }
-            echo "✅ Local branch '$branch' synced to '$remote_name/$branch'"
+            echo " Local branch '$branch' synced to '$remote_name/$branch'"
             ;;
         * )
             echo "Aborted"
@@ -565,75 +565,75 @@ ghelp() {
 	githelp | less -RPs'[Press q to quit help] '
 }
 # ================================
-# 📖 Colored Git Helper Menu
+#  Colored Git Helper Menu
 # ================================
 githelp() {
-    echo -e "\n\e[1;32m🌱 Git Helper Commands\e[0m\n"
+    echo -e "\n\e[1;32m Git Helper Commands\e[0m\n"
 
     echo -e "\e[1;32m[ GitWork Flow (README) ]\e[0m"
-    echo -e "  \e[1;36mgflow\e[0m    → Show basic git workflow"
+    echo -e "  \e[1;36mgflow\e[0m     Show basic git workflow"
 
     echo -e "\n\e[1;32m[ Create / Status / Stage / Commit / Push ]\e[0m"
-    echo -e "  \e[1;36mgbc\e[0m      → Clone Repository e.g https://github.com/your_handle/your_repository_name"
-    echo -e "  \e[1;36mgbn\e[0m      → Create new branch with optional prefix (default: feat)"
-    echo -e "  \e[1;36mgbs\e[0m      → Branch Status"
-    echo -e "  \e[1;36mga\e[0m       → Stage files"
-    echo -e "  \e[1;36mgau\e[0m      → Unstage files"
-    echo -e "  \e[1;36mgc\e[0m       → Commit"
-    echo -e "  \e[1;36mgp\e[0m       → Push branch to remote"
+    echo -e "  \e[1;36mgbc\e[0m       Clone Repository e.g https://github.com/your_handle/your_repository_name"
+    echo -e "  \e[1;36mgbn\e[0m       Create new branch with optional prefix (default: feat)"
+    echo -e "  \e[1;36mgbs\e[0m       Branch Status"
+    echo -e "  \e[1;36mga\e[0m        Stage files"
+    echo -e "  \e[1;36mgau\e[0m       Unstage files"
+    echo -e "  \e[1;36mgc\e[0m        Commit"
+    echo -e "  \e[1;36mgp\e[0m        Push branch to remote"
 
     echo -e "\n\e[1;32m[ Logs / Diffs / Show ]\e[0m"
-    echo -e "  \e[1;36mgl\e[0m       → Pretty log"
-    echo -e "  \e[1;36mgll\e[0m      → Detailed log with colors"
-    echo -e "  \e[1;36mgsh\e[0m      → Show latest commit details"
-    echo -e "  \e[1;36mgd\e[0m       → Diff unstaged changes"
-    echo -e "  \e[1;36mgds\e[0m      → Diff staged changes"
+    echo -e "  \e[1;36mgl\e[0m        Pretty log"
+    echo -e "  \e[1;36mgll\e[0m       Detailed log with colors"
+    echo -e "  \e[1;36mgsh\e[0m       Show latest commit details"
+    echo -e "  \e[1;36mgd\e[0m        Diff unstaged changes"
+    echo -e "  \e[1;36mgds\e[0m       Diff staged changes"
 
     echo -e "\n\e[1;32m[ Blame / File History ]\e[0m"
-    echo -e "  \e[1;36mgblame <file>\e[0m               → Show blame for file"
-    echo -e "  \e[1;36mgblame_line <f> <line>\e[0m      → Show blame for specific line"
-    echo -e "  \e[1;36mgblame_show <f> <line>\e[0m      → Show commit that changed line"
-    echo -e "  \e[1;36mgline_history <f> <line>\e[0m    → Show history of a line"
-    echo -e "  \e[1;36mgblame_recent <f> [N]\e[0m       → Blame limited to last N commits (default 5)"
+    echo -e "  \e[1;36mgblame <file>\e[0m                Show blame for file"
+    echo -e "  \e[1;36mgblame_line <f> <line>\e[0m       Show blame for specific line"
+    echo -e "  \e[1;36mgblame_show <f> <line>\e[0m       Show commit that changed line"
+    echo -e "  \e[1;36mgline_history <f> <line>\e[0m     Show history of a line"
+    echo -e "  \e[1;36mgblame_recent <f> [N]\e[0m        Blame limited to last N commits (default 5)"
 
 
     echo -e "\n\e[1;32m[ Branch Management ]\e[0m"
-    echo -e "  \e[1;36mgman\e[0m     → Branch Management"
-    echo -e "  \e[1;36mgcomp\e[0m    → Stage + Commit + Push (All-in-One)"
-    echo -e "  \e[1;36mgco\e[0m      → Checkout branch (with -p perform git pull and return to previous branch)"
-    echo -e "  \e[1;36mgcb\e[0m      → Interactive checkout"
-    echo -e "  \e[1;36mpushforce\e[0m → Force push local branch to remote (overwrites remote)"
-    echo -e "  \e[1;36msyncforce\e[0m → Hard-sync local branch to match remote (overwrites local)"
+    echo -e "  \e[1;36mgman\e[0m      Branch Management"
+    echo -e "  \e[1;36mgcomp\e[0m     Stage + Commit + Push (All-in-One)"
+    echo -e "  \e[1;36mgco\e[0m       Checkout branch (with -p perform git pull and return to previous branch)"
+    echo -e "  \e[1;36mgcb\e[0m       Interactive checkout"
+    echo -e "  \e[1;36mpushforce\e[0m  Force push local branch to remote (overwrites remote)"
+    echo -e "  \e[1;36msyncforce\e[0m  Hard-sync local branch to match remote (overwrites local)"
 
 
     echo -e "\n\e[1;32m[ Rebasing / Resetting ]\e[0m"
-    echo -e "  \e[1;36mgcr\e[0m      → Rebase last 5 commits interactively"
-    echo -e "  \e[1;36mgra\e[0m      → Abort rebase"
-    echo -e "  \e[1;36mgrc\e[0m      → Continue rebase"
-    echo -e "  \e[1;36mgrebase\e[0m  → Rebase current branch onto main (or specified)"
+    echo -e "  \e[1;36mgcr\e[0m       Rebase last 5 commits interactively"
+    echo -e "  \e[1;36mgra\e[0m       Abort rebase"
+    echo -e "  \e[1;36mgrc\e[0m       Continue rebase"
+    echo -e "  \e[1;36mgrebase\e[0m   Rebase current branch onto main (or specified)"
 
-    echo -e "  \e[1;36mgundo\e[0m    → Undo last commit (keep staged)"
-    echo -e "  \e[1;36mgundoh\e[0m   → Undo last commit (unstage changes)"
-    echo -e "  \e[1;36mgundoall\e[0m → Undo last commit (discard changes)"
+    echo -e "  \e[1;36mgundo\e[0m     Undo last commit (keep staged)"
+    echo -e "  \e[1;36mgundoh\e[0m    Undo last commit (unstage changes)"
+    echo -e "  \e[1;36mgundoall\e[0m  Undo last commit (discard changes)"
 
     echo -e "\n\e[1;32m[ Stash Helpers ]\e[0m"
-    echo -e "  \e[1;36mgstash\e[0m   → Save stash (includes untracked)"
-    echo -e "  \e[1;36mgstashm\e[0m  → Save stash with message"
-    echo -e "  \e[1;36mgstashl\e[0m  → List stash entries"
-    echo -e "  \e[1;36mgstasha\e[0m  → Apply latest stash"
-    echo -e "  \e[1;36mgstashp\e[0m  → Pop latest stash"
-    echo -e "  \e[1;36mgstashd\e[0m  → Drop stash by ID"
+    echo -e "  \e[1;36mgstash\e[0m    Save stash (includes untracked)"
+    echo -e "  \e[1;36mgstashm\e[0m   Save stash with message"
+    echo -e "  \e[1;36mgstashl\e[0m   List stash entries"
+    echo -e "  \e[1;36mgstasha\e[0m   Apply latest stash"
+    echo -e "  \e[1;36mgstashp\e[0m   Pop latest stash"
+    echo -e "  \e[1;36mgstashd\e[0m   Drop stash by ID"
 
     echo -e "\n\e[1;32m[ File Tracking ]\e[0m"
-    echo -e "  \e[1;36mguntrack\e[0m → Stop tracking file but keep locally"
+    echo -e "  \e[1;36mguntrack\e[0m  Stop tracking file but keep locally"
 
     echo -e "\n\e[1;32m[ Remote / Upstream Helper ]\e[0m"
-    echo -e "  \e[1;36msetremote\e[0m → Add or update a remote URL"
-    echo -e "  \e[1;36mpushup\e[0m    → Push current branch and set upstream"
-    echo -e "  \e[1;36mghcreate\e[0m  → Create GitHub repo and push"
-    echo -e "  \e[1;36mremoteinfo\e[0m → Show remotes and upstream info"
+    echo -e "  \e[1;36msetremote\e[0m  Add or update a remote URL"
+    echo -e "  \e[1;36mpushup\e[0m     Push current branch and set upstream"
+    echo -e "  \e[1;36mghcreate\e[0m   Create GitHub repo and push"
+    echo -e "  \e[1;36mremoteinfo\e[0m  Show remotes and upstream info"
 
-    echo -e "\n💡 Tip: Run \e[1;36mghelp\e[0m anytime to recall these shortcuts!\n"
+    echo -e "\n Tip: Run \e[1;36mghelp\e[0m anytime to recall these shortcuts!\n"
 }
 
 REPO="$HOME/desktop/GIT"

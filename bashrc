@@ -132,8 +132,6 @@ gcpy() {
             shopt -s nocasematch
             if [[ "$abs_src" != "$repo_root"/* ]]; then
                 echo "Blocked: '$f' is outside repo root"
-                echo "DEBUG: abs_src=$abs_src"
-                echo "DEBUG: repo_root=$repo_root"
                 shopt -u nocasematch
                 return 1
             fi

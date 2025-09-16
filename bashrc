@@ -105,7 +105,6 @@ pushup() {
 # Copy files within current Git branch
 # Usage: gcopy <source> <destination>
 # ========================================
-
 gcpy() {
     if ! git rev-parse --show-toplevel &>/dev/null; then
         echo "Not inside a Git repository"
@@ -114,42 +113,53 @@ gcpy() {
 
     local repo_root
     repo_root=$(git rev-parse --show-toplevel)
+    repo_root=$(cygpath -u "$repo_root")   # normalize → /c/Users/...
 
-    # Need at least 2 args: source(s) and destination
     if [[ $# -lt 2 ]]; then
         echo "Usage: gcpy <source...> <destination>"
         return 1
     fi
 
-    # Destination = last arg
     local dest="${@: -1}"
-    # Sources = everything before last arg
     local sources=("${@:1:$#-1}")
 
-    # Expand and validate sources
     for src in "${sources[@]}"; do
         for f in $src; do
             local abs_src
-            abs_src=$(realpath "$f" 2>/dev/null)
-            if [[ "$abs_src" != $repo_root/* ]]; then
+            abs_src=$(realpath -m "$f" 2>/dev/null)
+            abs_src=$(cygpath -u "$abs_src")
+
+            shopt -s nocasematch
+            if [[ "$abs_src" != "$repo_root"/* ]]; then
                 echo "Blocked: '$f' is outside repo root"
+                echo "DEBUG: abs_src=$abs_src"
+                echo "DEBUG: repo_root=$repo_root"
+                shopt -u nocasematch
                 return 1
             fi
+            shopt -u nocasematch
         done
     done
 
-    # Validate destination
     local abs_dest
     abs_dest=$(realpath -m "$dest" 2>/dev/null)
-    if [[ "$abs_dest" != $repo_root/* ]]; then
+    abs_dest=$(cygpath -u "$abs_dest")
+
+    shopt -s nocasematch
+    if [[ "$abs_dest" != "$repo_root"/* ]]; then
         echo "Blocked: destination '$dest' is outside repo root"
+        shopt -u nocasematch
         return 1
     fi
+    shopt -u nocasematch
 
-    # Copy files
+    # Auto-create destination folder
+    mkdir -p "$dest"
+
     cp -r "${sources[@]}" "$dest" && \
         echo "Copied ${sources[*]} → $dest"
 }
+
 
 # ================================
 #  Git Blame & History Helpers

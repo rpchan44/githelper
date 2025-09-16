@@ -46,7 +46,7 @@ alias gundoall='echo Undo last commit and discard changes; git reset --hard HEAD
 
 # --- File Tracking ---
 alias guntrack='echo Stop tracking file but keep locally; git rm --cached'
-alias gcpy='gcopy'
+alias gcpy='gcpy'
 # --- Stash Helpers ---
 alias gstash='echo Saving changes to stash; git stash push -u'
 alias gstashm='echo Saving changes to stash with message; git stash push -u -m'
@@ -115,14 +115,16 @@ gcpy() {
     local repo_root
     repo_root=$(git rev-parse --show-toplevel)
 
-    # Destination = last arg, Sources = all before
-    local dest="${@: -1}"
-    local sources=("${@:1:$#-1}")
-
-    if [[ ${#sources[@]} -eq 0 ]]; then
+    # Need at least 2 args: source(s) and destination
+    if [[ $# -lt 2 ]]; then
         echo "Usage: gcpy <source...> <destination>"
         return 1
     fi
+
+    # Destination = last arg
+    local dest="${@: -1}"
+    # Sources = everything before last arg
+    local sources=("${@:1:$#-1}")
 
     # Expand and validate sources
     for src in "${sources[@]}"; do
@@ -146,7 +148,7 @@ gcpy() {
 
     # Copy files
     cp -r "${sources[@]}" "$dest" && \
-        echo "✅ Copied ${sources[*]} → $dest"
+        echo "Copied ${sources[*]} → $dest"
 }
 
 # ================================
@@ -258,7 +260,7 @@ YELLOW="\[\e[1;33m\]"
 BLUE="\[\e[1;34m\]"
 RESET="\[\e[0m\]"
 
-export PS1="$GREEN\u@\h $BLUE\w $YELLOW\$(parse_git_status)$RESET  "
+export PS1="$GREEN\u@\h $BLUE\w $YELLOW\$(parse_git_status)$RESET"
 gbmanage() {
     local action=$1 target=$2 branch=$3 newname=$4
     local RED="\033[0;31m" GREEN="\033[0;32m" YELLOW="\033[1;33m" RESET="\033[0m"

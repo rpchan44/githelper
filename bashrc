@@ -190,17 +190,17 @@ parse_git_status() {
     untracked=$(git ls-files --others --exclude-standard 2>/dev/null | wc -l)
     dirty=""
 
-    [ "${staged:-0}" -gt 0 ] && dirty+=""
-    [ "${unstaged:-0}" -gt 0 ] && dirty+=""
-    [ "${untracked:-0}" -gt 0 ] && dirty+=""
-    [ -z "$dirty" ] && dirty=""
+    [ "${staged:-0}" -gt 0 ] && dirty+="+"
+    [ "${unstaged:-0}" -gt 0 ] && dirty+="..."
+    [ "${untracked:-0}" -gt 0 ] && dirty+="-"
+    [ -z "$dirty" ] && dirty="OK"
 
     ahead=$(git rev-list --count --left-only @{u}...HEAD 2>/dev/null || echo 0)
     behind=$(git rev-list --count --right-only @{u}...HEAD 2>/dev/null || echo 0)
     ab=""
 
-    [ "${ahead:-0}" -gt 0 ] && ab+="$ahead"
-    [ "${behind:-0}" -gt 0 ] && ab+="$behind"
+    [ "${ahead:-0}" -gt 0 ] && ab+="-->$ahead"
+    [ "${behind:-0}" -gt 0 ] && ab+="<--$behind"
 
     echo " $branch $dirty $ab"
 }

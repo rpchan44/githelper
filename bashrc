@@ -562,7 +562,7 @@ syncforce() {
 }
 
 ghelp() { 
-	githelp | less -R
+	githelp | less -RPs'[Press q to quit help] '
 }
 # ================================
 # 📖 Colored Git Helper Menu
@@ -590,11 +590,11 @@ githelp() {
     echo -e "  \e[1;36mgds\e[0m      → Diff staged changes"
 
     echo -e "\n\e[1;32m[ Blame / File History ]\e[0m"
-    echo -e "  \e[1;36mgblame <file>\e[0m         → Show blame for file"
-    echo -e "  \e[1;36mgblame_line <f> <line>\e[0m → Show blame for specific line"
-    echo -e "  \e[1;36mgblame_show <f> <line>\e[0m → Show commit that changed line"
-    echo -e "  \e[1;36mgline_history <f> <line>\e[0m → Show history of a line"
-    echo -e "  \e[1;36mgblame_recent <f> [N]\e[0m  → Blame limited to last N commits (default 5)"
+    echo -e "  \e[1;36mgblame <file>\e[0m               → Show blame for file"
+    echo -e "  \e[1;36mgblame_line <f> <line>\e[0m      → Show blame for specific line"
+    echo -e "  \e[1;36mgblame_show <f> <line>\e[0m      → Show commit that changed line"
+    echo -e "  \e[1;36mgline_history <f> <line>\e[0m    → Show history of a line"
+    echo -e "  \e[1;36mgblame_recent <f> [N]\e[0m       → Blame limited to last N commits (default 5)"
 
 
     echo -e "\n\e[1;32m[ Branch Management ]\e[0m"

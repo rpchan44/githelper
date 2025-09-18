@@ -678,7 +678,7 @@ githelp() {
 
     echo -e "\n\e[1;32m[ Branch Management ]\e[0m"
     echo -e "  \e[1;36mgman\e[0m      Branch Management"
-    echo -e "  \e[1;36mgbsan\e[0m  Auto-remove + commit ignored files"
+    echo -e "  \e[1;36mgbsan\e[0m     Auto-remove + commit ignored files"
     echo -e "  \e[1;36mgcomp\e[0m     Stage + Commit + Push (All-in-One)"
     echo -e "  \e[1;36mgco\e[0m       Checkout branch (with -p perform git pull and return to previous branch)"
     echo -e "  \e[1;36mgcb\e[0m       Interactive checkout"

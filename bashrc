@@ -109,7 +109,7 @@ pushup() {
 gbclean() {
     echo "Scanning for ignored but tracked files..."
     local ignored
-    ignored=$(git ls-files -i --exclude-from=.gitignore)
+    ignored=$(git ls-files -ci --exclude-from=.gitignore)
 
     if [ -z "$ignored" ]; then
         echo "Nothing to clean"
@@ -118,7 +118,7 @@ gbclean() {
 
     echo "Removing and committing ignored files..."
     git rm --cached $ignored
-    gcomp "Remove ignored files now covered by .gitignore"
+    git commit -m "Remove ignored files now covered by .gitignore"
     echo "Done."
 }
 

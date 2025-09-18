@@ -33,6 +33,7 @@ alias gblr='gblame_recent'  # blame last N commits
 alias gbc="echo Cloning Repository; git clone "
 alias gcomp="gacp"
 alias gman='gbmanage'
+alias gbsan='gbclean'
 alias gpf='echo Push your local to remote (no matter what); pushforce'
 alias gsf='echo Pull your remote branch to your local (no matter what); syncforce'
 
@@ -99,6 +100,26 @@ pushup() {
     [ -z "$branch" ] && { echo "Not on a branch"; return 1; }
     echo "Pushing branch '$branch' to remote '$remote_name'"
     git push -u "$remote_name" "$branch"
+}
+
+# ================================
+#  Remove files covered by .gitignore after the fact
+# ================================
+
+gbclean() {
+    echo "Scanning for ignored but tracked files..."
+    local ignored
+    ignored=$(git ls-files -i --exclude-from=.gitignore)
+
+    if [ -z "$ignored" ]; then
+        echo "Nothing to clean"
+        return 0
+    fi
+
+    echo "Removing and committing ignored files..."
+    git rm --cached $ignored
+    gcomp "Remove ignored files now covered by .gitignore"
+    echo "Done."
 }
 
 # ========================================
@@ -657,6 +678,7 @@ githelp() {
 
     echo -e "\n\e[1;32m[ Branch Management ]\e[0m"
     echo -e "  \e[1;36mgman\e[0m      Branch Management"
+    echo -e "  \e[1;36mgbsan\e[0m  Auto-remove + commit ignored files"
     echo -e "  \e[1;36mgcomp\e[0m     Stage + Commit + Push (All-in-One)"
     echo -e "  \e[1;36mgco\e[0m       Checkout branch (with -p perform git pull and return to previous branch)"
     echo -e "  \e[1;36mgcb\e[0m       Interactive checkout"

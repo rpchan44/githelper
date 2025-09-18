@@ -109,7 +109,7 @@ pushup() {
 gbclean() {
     echo "Scanning for ignored but tracked files..."
     local ignored
-    ignored=$(git ls-files -ci --exclude-from=.gitignore)
+    ignored=$(git ls-files -ci --exclude-standard)
 
     if [ -z "$ignored" ]; then
         echo "Nothing to clean"

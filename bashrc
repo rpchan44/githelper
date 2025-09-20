@@ -504,9 +504,29 @@ gacp() {
     # User message
     local msg=$*
     if [ -z "$msg" ]; then
-        echo "Usage: gcomp <commit-message>"
-        echo "Example: gcomp \"My Commit Message\""
+        echo "Usage: gacp <commit-message>"
+        echo "Example: gacp \"My Commit Message\""
         return 1
+    fi
+
+    # Detect Terraform repo (must have *.tf files or terraform.lock.hcl)
+    if git ls-files -- '*.tf' | grep -q '\.tf$' || [ -f "terraform.lock.hcl" ]; then
+        echo "Terraform repo detected."
+
+        echo "Running terraform fmt..."
+        terraform fmt -recursive
+
+        echo " Checking formatting..."
+        if ! terraform fmt -check -recursive >/dev/null 2>&1; then
+            echo "Terraform files not formatted. Please run 'terraform fmt -recursive'."
+            return 1
+        fi
+
+        echo " Validating Terraform..."
+        terraform validate || {
+            echo "Terraform validation failed."
+            return 1
+        }
     fi
 
     # Final commit message
@@ -518,7 +538,7 @@ gacp() {
     echo " Committing: $commit_msg"
     git commit -m "$commit_msg"
 
-    echo "  Pushing branch: $branch"
+    echo " Pushing branch: $branch"
     git push -u origin "$branch"
 }
 

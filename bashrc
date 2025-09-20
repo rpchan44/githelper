@@ -509,8 +509,8 @@ gacp() {
         return 1
     fi
 
-    # Detect Terraform repo (check for *.tf or terraform.lock.hcl)
-    if git ls-files "*.tf" >/dev/null 2>&1 || [ -f "terraform.lock.hcl" ]; then
+    # Detect Terraform repo (must have *.tf files or terraform.lock.hcl)
+    if git ls-files -- '*.tf' | grep -q '\.tf$' || [ -f "terraform.lock.hcl" ]; then
         echo " Terraform repo detected."
 
         echo " Running terraform fmt..."
@@ -518,13 +518,13 @@ gacp() {
 
         echo " Checking formatting..."
         if ! terraform fmt -check -recursive >/dev/null 2>&1; then
-            echo "Terraform files not formatted. Please run 'terraform fmt -recursive'."
+            echo " ❌ Terraform files not formatted. Please run 'terraform fmt -recursive'."
             return 1
         fi
 
         echo " Validating Terraform..."
         terraform validate || {
-            echo "Terraform validation failed."
+            echo " ❌ Terraform validation failed."
             return 1
         }
     fi

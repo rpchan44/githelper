@@ -514,13 +514,7 @@ gacp() {
         echo "Terraform repo detected."
 
         echo "Running terraform fmt..."
-        terraform fmt -recursive
-
-        echo " Checking formatting..."
-        if ! terraform fmt -check -recursive >/dev/null 2>&1; then
-            echo "Terraform files not formatted. Please run 'terraform fmt -recursive'."
-            return 1
-        fi
+        terraform fmt
 
         echo " Validating Terraform..."
         terraform validate || {

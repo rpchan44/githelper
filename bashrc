@@ -48,6 +48,13 @@ alias gundoall='echo Undo last commit and discard changes; git reset --hard HEAD
 # --- File Tracking ---
 alias guntrack='echo Stop tracking file but keep locally; git rm --cached'
 alias gcpy='gcpy'
+
+# --- Patch Helpers ---
+alias gp='gpatch'
+alias gpa='gpatch_apply'
+alias gps='gpatch_send'
+alias gpaall='gpatch_apply_all'
+
 # --- Stash Helpers ---
 alias gstash='echo Saving changes to stash; git stash push -u'
 alias gstashm='echo Saving changes to stash with message; git stash push -u -m'
@@ -407,6 +414,67 @@ gbmanage() {
             ;;
     esac
 }
+
+# ================================
+#  Minimal Patch Helpers
+# ================================
+
+# Create patch file(s) for sharing
+gpatch() {
+    local outdir="../git_patches"   # always outside the repo
+    mkdir -p "$outdir"
+
+    local range=${1:-HEAD~1..HEAD}  # default = last commit
+
+    git format-patch "$range" -o "$outdir"
+    echo "Patch(es) saved in $outdir/"
+}
+
+# Apply a patch file
+gpatch_apply() {
+    if [ $# -eq 0 ]; then
+        echo "Usage: gpatch_apply <patch-file>"
+        return 1
+    fi
+
+    git apply "$1" && echo "Applied patch: $1"
+}
+
+# Tarball all patches for sending
+gpatch_send() {
+    local outdir="../git_patches"
+    local tarfile="patches_$(date +%Y%m%d_%H%M%S).tar.gz"
+
+    if [ ! -d "$outdir" ]; then
+        echo "No patches found in $outdir"
+        return 1
+    fi
+
+    tar -czf "$tarfile" -C "$outdir" .
+    echo "Created archive: $tarfile"
+}
+
+# Apply all patches from a directory (stop on failure)
+gpatch_apply_all() {
+    local dir=${1:-.}
+
+    if [ ! -d "$dir" ]; then
+        echo "Directory not found: $dir"
+        return 1
+    fi
+
+    for patch in "$dir"/*.patch; do
+        [ -f "$patch" ] || continue
+        echo "Applying: $patch"
+        if ! git apply "$patch"; then
+            echo "❌ Failed on patch: $patch"
+            return 1
+        fi
+        echo "✅ Applied: $patch"
+    done
+    echo "All patches applied successfully."
+}
+
 # Create a new git branch with an optional prefix (default: feature)
 gnew() {
     local prefix name branch override=0
@@ -721,6 +789,18 @@ githelp() {
     echo -e "\n\e[1;32m[ File Tracking ]\e[0m"
     echo -e "  \e[1;36mguntrack\e[0m  Stop tracking file but keep locally"
     echo -e "  \e[1;36mgcpy\e[0m      Copying files/asset within the branch"
+    
+    echo -e "\n\e[1;32m[ Git Patch Helpers ]\e[0m"
+    echo -e "  \e[1;36mgpatch\e[0m            Create patch(es) (default = last commit)"
+    echo -e "  \e[1;36mgpatch_send\e[0m       Bundle patches into a tar.gz"
+    echo -e "  \e[1;36mgpatch_apply\e[0m      Apply a single patch file"
+    echo -e "  \e[1;36mgpatch_apply_all\e[0m  Apply all patches in a directory (stops on error)"
+    echo -e "\nExamples:"
+    echo -e "  gpatch HEAD~3..HEAD"
+    echo -e "  gpatch_send"
+    echo -e "  gpatch_apply ../git_patches/0001-some-change.patch"
+    echo -e "  gpatch_apply_all /tmp/patches"
+    echo
 
     echo -e "\n\e[1;32m[ Remote / Upstream Helper ]\e[0m"
     echo -e "  \e[1;36msetremote\e[0m  Add or update a remote URL"

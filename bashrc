@@ -6,6 +6,7 @@ if [ -f ~/.git-completion.bash ]; then
 fi
 # --- WORKFLOW ---
 alias gflow="workflow"
+alias grs='grebase_squash'
 # --- Git Basics ---
 alias gbn='gnew'
 alias gbs='echo Branch Status; git status'
@@ -557,52 +558,55 @@ gacp() {
     # Get current branch
     branch=$(git symbolic-ref --short HEAD 2>/dev/null)
     if [ -z "$branch" ]; then
-        echo " Not on a branch"
+        echo "Not on a branch"
         return 1
     fi
 
-    # Extract prefix and ticket (split at "/")
-    type=$(echo "$branch" | cut -d/ -f1)
+    # Extract ticket from branch (everything after first '/')
     ticket=$(echo "$branch" | cut -d/ -f2-)
-
-    # Fallbacks
-    [ -z "$type" ] && type="chore"
     [ -z "$ticket" ] && ticket="$branch"
 
-    # User message
-    local msg=$*
-    if [ -z "$msg" ]; then
-        echo "Usage: gacp <commit-message>"
-        echo "Example: gacp \"My Commit Message\""
-        return 1
-    fi
+    # Prompt for commit type (default to 'feat')
+    default_type="feat"
+    echo "Select commit type (default: $default_type):"
+    select type in feat chore fix; do
+        if [[ -z "$type" ]]; then
+            type="$default_type"
+        fi
+        case $type in
+            feat|chore|fix) break ;;
+            *) echo "Invalid choice, select 1, 2, or 3";;
+        esac
+    done
 
-    # Detect Terraform repo (must have *.tf files or terraform.lock.hcl)
+    # Prompt for commit message
+    echo "Enter commit message:"
+    read -r msg
+    [ -z "$msg" ] && { echo "Commit message cannot be empty"; return 1; }
+
+    # Detect Terraform repo
     if git ls-files -- '*.tf' | grep -q '\.tf$' || [ -f "terraform.lock.hcl" ]; then
         echo "Terraform repo detected."
-
         echo "Running terraform fmt..."
         terraform fmt
-
-        echo " Validating Terraform..."
-        terraform validate || {
-            echo "Terraform validation failed."
-            return 1
-        }
+        echo "Validating Terraform..."
+        terraform validate || { echo "Terraform validation failed"; return 1; }
     fi
 
-    # Final commit message
-    commit_msg="${type}: ${ticket} - ${msg}"
-
-    echo " Adding all files..."
+    # Stage all files
+    echo "Adding all files..."
     git add .
 
-    echo " Committing: $commit_msg"
+    # Commit with selected type and ticket
+    commit_msg="${type}: ${ticket} - ${msg}"
+    echo "Committing: $commit_msg"
     git commit -m "$commit_msg"
 
-    echo " Pushing branch: $branch"
+    # Push branch
+    echo "Pushing branch: $branch"
     git push -u origin "$branch"
 }
+
 
 
 gcb() {
@@ -773,6 +777,7 @@ githelp() {
     echo -e "  \e[1;36mgra\e[0m       Abort rebase"
     echo -e "  \e[1;36mgrc\e[0m       Continue rebase"
     echo -e "  \e[1;36mgrebase\e[0m   Rebase current branch onto main (or specified)"
+    echo -e "  \e[1;36mgrebase_squash\e[0m  Squash multiple commits, force push, then rebase onto main and commit via gcomp"
 
     echo -e "  \e[1;36mgundo\e[0m     Undo last commit (keep staged)"
     echo -e "  \e[1;36mgundoh\e[0m    Undo last commit (unstage changes)"
@@ -810,6 +815,48 @@ githelp() {
 
     echo -e "\n Tip: Run \e[1;36mghelp\e[0m anytime to recall these shortcuts!\n"
 }
+
+grebase_squash() {
+  # find how many commits since branching off main
+  base=$(git merge-base HEAD origin/main)
+  count=$(git rev-list --count ${base}..HEAD)
+
+  git fetch origin main
+
+  if [ "$count" -gt 1 ]; then
+    echo "Branch has $count commits since main."
+    echo "Launching interactive rebase to squash..."
+    git rebase -i "$base" || {
+      echo "Rebase failed. Resolve conflicts manually."
+      return 1
+    }
+    echo "Rebase done. Pushing with force-with-lease..."
+    git push --force-with-lease
+  else
+    echo "Branch has only one commit since main. Nothing to squash."
+  fi
+
+  echo "Rebasing the current branch to main..."
+  grebase || {
+    echo "Rebase onto main failed. Resolve conflicts manually."
+    return 1
+  }
+
+  echo "Select commit type:"
+  select type in feat chore fix; do
+    case $type in
+      feat|chore|fix)
+        echo "Running final commit helper with type: $type"
+        gcomp "$type"
+        break
+        ;;
+      *)
+        echo "Invalid choice, please select again."
+        ;;
+    esac
+  done
+}
+
 
 REPO="$HOME/desktop/GIT"
 echo "CD to your GIT workspace"

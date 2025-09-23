@@ -777,7 +777,7 @@ githelp() {
     echo -e "  \e[1;36mgra\e[0m       Abort rebase"
     echo -e "  \e[1;36mgrc\e[0m       Continue rebase"
     echo -e "  \e[1;36mgrebase\e[0m   Rebase current branch onto main (or specified)"
-    echo -e "  \e[1;36mgrebase_squash\e[0m  Squash multiple commits, force push, then rebase onto main and commit via gcomp"
+    echo -e "  \e[1;36mgrs\e[0m       Squash multiple commits, force push, then rebase onto main and commit via gcomp"
 
     echo -e "  \e[1;36mgundo\e[0m     Undo last commit (keep staged)"
     echo -e "  \e[1;36mgundoh\e[0m    Undo last commit (unstage changes)"

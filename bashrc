@@ -7,6 +7,8 @@ fi
 # --- WORKFLOW ---
 alias gflow="workflow"
 alias grs='grebase_squash'
+alias nukem='nuke'
+
 # --- Git Basics ---
 alias gbn='gnew'
 alias gbs='echo Branch Status; git status'
@@ -763,6 +765,7 @@ githelp() {
     echo -e "  \e[1;36mgcb\e[0m       Interactive checkout"
     echo -e "  \e[1;36mpushforce\e[0m  Force push local branch to remote (overwrites remote)"
     echo -e "  \e[1;36msyncforce\e[0m  Hard-sync local branch to match remote (overwrites local)"
+    echo -e "  \e[1;36mnukem\e[0m      Genesis Branch"
 
 
     echo -e "\n\e[1;32m[ Rebasing / Resetting ]\e[0m"
@@ -809,6 +812,10 @@ githelp() {
     echo -e "\n Tip: Run \e[1;36mghelp\e[0m anytime to recall these shortcuts!\n"
 }
 
+nukem() { 
+	git checkout --orphan temp_branch && git add -A && git commit -m "Initial commit" && git branch -D main && git branch -m main && git push -f origin main
+	echo "Branch nuke"
+}
 grebase_squash() {
   # find how many commits since branching off main
   base=$(git merge-base HEAD origin/main)

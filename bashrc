@@ -669,7 +669,20 @@ grebase() {
         [Yy]* )
             git fetch origin || { echo "Failed to fetch"; return 1; }
             git rebase "origin/$target" || { echo "Rebase failed"; return 1; }
-            echo "Rebased '$branch' onto 'origin/$target'"
+            echo "Rebased '$branch' onto 'origin/$target'."
+
+            # Prompt to push
+            echo "Do you want to push '$branch' to origin with --force-with-lease? [y/N]"
+            read -r push_answer
+            case "$push_answer" in
+                [Yy]* )
+                    git push origin "$branch" --force-with-lease || { echo "Push failed"; return 1; }
+                    echo "Branch '$branch' pushed successfully."
+                    ;;
+                * )
+                    echo "Push skipped."
+                    ;;
+            esac
             ;;
         * )
             echo "Aborted"
@@ -836,18 +849,17 @@ grebase_squash() {
     echo "Branch has only one commit since main. Nothing to squash."
   fi
 
-  echo "Rebasing the current branch to main..."
-  grebase || {
-    echo "Rebase onto main failed. Resolve conflicts manually."
-    return 1
-  }
-
   echo "Select commit type:"
   select type in feat chore fix; do
     case $type in
       feat|chore|fix)
         echo "Running final commit helper with type: $type"
         gacp "$type"
+	echo "Rebasing the current branch to main..."
+	  grebase || {
+	    echo "Rebase onto main failed. Resolve conflicts manually."
+	    return 1
+	  }
         break
         ;;
       *)

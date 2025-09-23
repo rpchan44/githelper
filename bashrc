@@ -561,11 +561,11 @@ gacp() {
         echo "Not on a branch"
         return 1
     fi
-
+	
     # Extract ticket from branch (everything after first '/')
     ticket=$(echo "$branch" | cut -d/ -f2-)
     [ -z "$ticket" ] && ticket="$branch"
-
+    type=$1
     # Prompt for commit type (default to 'feat')
     default_type="feat"
     echo "Select commit type (default: $default_type):"
@@ -847,7 +847,7 @@ grebase_squash() {
     case $type in
       feat|chore|fix)
         echo "Running final commit helper with type: $type"
-        gcomp "$type"
+        gacp "$type"
         break
         ;;
       *)

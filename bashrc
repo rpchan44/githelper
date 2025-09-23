@@ -566,18 +566,6 @@ gacp() {
     ticket=$(echo "$branch" | cut -d/ -f2-)
     [ -z "$ticket" ] && ticket="$branch"
     type=$1
-    # Prompt for commit type (default to 'feat')
-    default_type="feat"
-    echo "Select commit type (default: $default_type):"
-    select type in feat chore fix; do
-        if [[ -z "$type" ]]; then
-            type="$default_type"
-        fi
-        case $type in
-            feat|chore|fix) break ;;
-            *) echo "Invalid choice, select 1, 2, or 3";;
-        esac
-    done
 
     # Prompt for commit message
     echo "Enter commit message:"
@@ -601,6 +589,11 @@ gacp() {
     commit_msg="${type}: ${ticket} - ${msg}"
     echo "Committing: $commit_msg"
     git commit -m "$commit_msg"
+    echo "Rebasing the current branch to main..."
+    grebase || {
+    	  echo "Rebase onto main failed. Resolve conflicts manually."
+    	  return 1
+    }
 
     # Push branch
     echo "Pushing branch: $branch"
@@ -669,20 +662,7 @@ grebase() {
         [Yy]* )
             git fetch origin || { echo "Failed to fetch"; return 1; }
             git rebase "origin/$target" || { echo "Rebase failed"; return 1; }
-            echo "Rebased '$branch' onto 'origin/$target'."
-
-            # Prompt to push
-            echo "Do you want to push '$branch' to origin with --force-with-lease? [y/N]"
-            read -r push_answer
-            case "$push_answer" in
-                [Yy]* )
-                    git push origin "$branch" --force-with-lease || { echo "Push failed"; return 1; }
-                    echo "Branch '$branch' pushed successfully."
-                    ;;
-                * )
-                    echo "Push skipped."
-                    ;;
-            esac
+            echo "Rebased '$branch' onto 'origin/$target'"
             ;;
         * )
             echo "Aborted"
@@ -849,17 +829,12 @@ grebase_squash() {
     echo "Branch has only one commit since main. Nothing to squash."
   fi
 
-  echo "Select commit type:"
+  echo "Select task:"
   select type in feat chore fix; do
     case $type in
       feat|chore|fix)
-        echo "Running final commit helper with type: $type"
+        echo "Running final commit helper with task: $type"
         gacp "$type"
-	echo "Rebasing the current branch to main..."
-	  grebase || {
-	    echo "Rebase onto main failed. Resolve conflicts manually."
-	    return 1
-	  }
         break
         ;;
       *)

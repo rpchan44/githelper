@@ -629,7 +629,6 @@ process() {
 
     # Push branch (try force-with-lease, fallback to force)
     echo -e "${RED}Pushing branch: $branch${NC}"
-    git fetch origin "$branch"
     git push --force-with-lease origin "$branch" || {
         echo "Force-with-lease failed, falling back to force push..."
         git push --force origin "$branch" || {

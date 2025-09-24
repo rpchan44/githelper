@@ -33,7 +33,6 @@ alias gblr='gblame_recent'  # blame last N commits
 
 # --- Branch Management ---
 alias gbc="echo Cloning Repository; git clone "
-alias gcomp="gacp"
 alias gman='gbmanage'
 alias gbsan='gbclean'
 alias gpf='echo Push your local to remote (no matter what); pushforce'
@@ -545,7 +544,7 @@ gco() {
     fi
 }
 
-gacp() {
+process() {
     # Get current branch
     branch=$(git symbolic-ref --short HEAD 2>/dev/null)
     if [ -z "$branch" ]; then
@@ -564,11 +563,6 @@ gacp() {
     fi
 
     type=$1
-    if [ -z "$type" ]; then
-        echo "Usage: gacp <type>"
-        echo "Example: gacp feat"
-        return 1
-    fi
 
     # Prompt for commit message
     echo "Enter commit message:"
@@ -851,7 +845,7 @@ task() {
     case $type in
       feat|chore|fix)
         echo "Running final commit helper with task: $type"
-        gacp "$type"
+        process "$type"
         break
         ;;
       *)

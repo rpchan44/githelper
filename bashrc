@@ -5,7 +5,7 @@ if [ -f ~/.git-completion.bash ]; then
         . ~/.git-completion.bash
 fi
 # --- WORKFLOW ---
-alias makepr='grebase_squash'
+alias makepr='task'
 alias nukem='nuke'
 
 # --- Git Basics ---
@@ -844,25 +844,7 @@ nukem() {
 	git checkout --orphan temp_branch && git add -A && git commit -m "Initial commit" && git branch -D main && git branch -m main && git push -f origin main
 	echo "Branch nuke"
 }
-grebase_squash() {
-  # find how many commits since branching off main
-  base=$(git merge-base HEAD origin/main)
-  count=$(git rev-list --count ${base}..HEAD)
-
-  git fetch origin main
-
-  if [ "$count" -gt 1 ]; then
-    echo "Branch has $count commits since main."
-    echo "Launching interactive rebase to squash..."
-    git rebase -i "$base" || {
-      echo "Rebase failed. Resolve conflicts manually."
-      return 1
-    }
-    echo "Rebase done. Pushing with force-with-lease..."
-    git push --force-with-lease
-  else
-    echo "Branch has only one commit since main. Nothing to squash."
-  fi
+task() {
 
   echo "Select task:"
   select type in feat chore fix; do

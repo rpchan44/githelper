@@ -7,7 +7,6 @@ fi
 # --- WORKFLOW ---
 alias gflow="workflow"
 alias grs='grebase_squash'
-alias gbls='gbranches'
 alias nukem='nuke'
 
 # --- Git Basics ---
@@ -481,7 +480,7 @@ gpatch_apply_all() {
 
 # Create a new git branch with an optional prefix (default: feature)
 gnew() {
-    local prefix name branch override=0
+    local prefix env name branch override=0
 
     # Parse -o option
     if [ "$1" = "-o" ]; then
@@ -489,29 +488,27 @@ gnew() {
         shift
     fi
 
-    if [ $# -eq 1 ]; then
-        if [ $override -eq 1 ]; then
-            branch=$1
-        else
-            prefix="feat"
-            name=$1
-            branch="${prefix}/${name}"
+    if [ $override -eq 1 ]; then
+        # -o means raw branch name (no prefix, no env)
+        if [ $# -ne 1 ]; then
+            echo "Usage: gnew -o <branch-name>"
+            return 1
         fi
-    elif [ $# -eq 2 ]; then
-        if [ $override -eq 1 ]; then
-            branch=$1  # when using -o, treat first argument as full branch name
-        else
-            prefix=$1
-            name=$2
-            branch="${prefix}/${name}"
-        fi
+        branch="$1"
     else
-        echo "Usage: gnew [-o] [prefix] <branch-name>"
-        echo "Examples:"
-        echo "  gnew HELP-123         # -> feat/HELP-123"
-        echo "  gnew bugfix HELP-123  # -> bugfix/HELP-123"
-        echo "  gnew -o HELP-123      # -> HELP-123 (no prefix)"
-        return 1
+        # Require prefix, env, and branch name
+        if [ $# -ne 3 ]; then
+            echo "Usage: gnew <prefix> <env> <branch-name>"
+            echo "Examples:"
+            echo "  gnew feat dev HELP-123     # -> feat/dev/HELP-123"
+            echo "  gnew bugfix prd HELP-123   # -> bugfix/prd/HELP-123"
+            echo "  gnew -o HELP-123           # -> HELP-123 (no prefix/env)"
+            return 1
+        fi
+        prefix="$1"
+        env="$2"
+        name="$3"
+        branch="${prefix}/${env}/${name}"
     fi
 
     echo "Creating and switching to branch: $branch"
@@ -564,11 +561,23 @@ gacp() {
         echo "Not on a branch"
         return 1
     fi
-	
-    # Extract ticket from branch (everything after first '/')
-    ticket=$(echo "$branch" | cut -d/ -f2-)
-    [ -z "$ticket" ] && ticket="$branch"
+
+    # Expected format: prefix/env/ticket
+    prefix=$(echo "$branch" | cut -d/ -f1)
+    env=$(echo "$branch" | cut -d/ -f2)
+    ticket=$(echo "$branch" | cut -d/ -f3-)
+
+    # If branch doesn't match format, fallback
+    if [ -z "$ticket" ] || [ "$ticket" = "$branch" ]; then
+        ticket="$branch"
+    fi
+
     type=$1
+    if [ -z "$type" ]; then
+        echo "Usage: gacp <type>"
+        echo "Example: gacp feat"
+        return 1
+    fi
 
     # Prompt for commit message
     echo "Enter commit message:"
@@ -588,20 +597,22 @@ gacp() {
     echo "Adding all files..."
     git add .
 
-    # Commit with selected type and ticket
-    commit_msg="${type}: ${ticket} - ${msg}"
+    # Commit with type + env + ticket + message
+    commit_msg="${type}: ${env}-${ticket}-${msg}"
     echo "Committing: $commit_msg"
     git commit -m "$commit_msg"
+
     echo "Rebasing the current branch to main..."
     grebase || {
-    	  echo "Rebase onto main failed. Resolve conflicts manually."
-    	  return 1
+        echo "Rebase onto main failed. Resolve conflicts manually."
+        return 1
     }
 
     # Push branch
     echo "Pushing branch: $branch"
     git push -u origin "$branch"
 }
+
 
 
 
@@ -720,23 +731,6 @@ syncforce() {
             return 0
             ;;
     esac
-}
-
-repos=(
-  "https://github.com/rpchan44/git-bashrc.git"
-  # Add more repos here if needed
-)
-
-# Function: list branches for all repos in array
-gbranches() {
-  for repo in "${repos[@]}"; do
-    echo "Branches in $repo:"
-    git ls-remote --heads "$repo" \
-      | awk '{ print $2 }' \
-      | sed -e 's/\// /g' \
-      | awk '{ print $3 }'
-    echo
-  done
 }
 
 ghelp() { 

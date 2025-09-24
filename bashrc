@@ -5,7 +5,6 @@ if [ -f ~/.git-completion.bash ]; then
         . ~/.git-completion.bash
 fi
 # --- WORKFLOW ---
-alias gflow="workflow"
 alias makepr='grebase_squash'
 alias nukem='nuke'
 
@@ -96,14 +95,6 @@ setremote() {
     git remote -v
 }
 
-workflow() { 
-    echo "-=-=-=-=-=-=-=-=-=-=-GIT WORKFLOW=-=-=-=-=-=-=-=-=-="
-    echo -e "THIS IS APPLICABLE ONLY FOR A REPOSITORY THAT'S ALREADY EXISTED ON YOUR LOCAL COMPUTER\n"
-    echo "Before creating a feature branch out of main branch of a specific repository issue gco -p main"
-    echo -e "This will allows you to update the main repository code before you make your own branch this is very important\n"
-    echo -e "e.g run\ngco -p main; gbn HELP-123\n"
-    echo -e "Under the hood this will make a git pull on the main branch of that repository and create a branch name feat/HELP-123\n"
-}
 pushup() {
     local remote_name=${1:-origin}
     local branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD)
@@ -765,7 +756,7 @@ githelp() {
     echo -e "\n\e[1;32m Git Helper Commands\e[0m\n"
 
     echo -e "\e[1;32m[ GitWork Flow (README) ]\e[0m"
-    echo -e "  \e[1;36mgflow\e[0m     Show basic git workflow"
+    echo -e "  \e[1;36mmakepr\e[0m    Squash multiple commits, then rebase onto your origin feature branch then rebase to origin main"
 
     echo -e "\n\e[1;32m[ Create / Status / Stage / Commit / Push ]\e[0m"
     echo -e "  \e[1;36mgbc\e[0m       Clone Repository e.g https://github.com/your_handle/your_repository_name"
@@ -805,7 +796,6 @@ githelp() {
     echo -e "  \e[1;36mgcr\e[0m       Rebase last 5 commits interactively"
     echo -e "  \e[1;36mgra\e[0m       Abort rebase"
     echo -e "  \e[1;36mgrc\e[0m       Continue rebase"
-    echo -e "  \e[1;36mmakepr\e[0m    Squash multiple commits, force push, then rebase onto your feature branch then rebase to main"
 
     echo -e "  \e[1;36mgundo\e[0m     Undo last commit (keep staged)"
     echo -e "  \e[1;36mgundoh\e[0m    Undo last commit (unstage changes)"

@@ -7,6 +7,7 @@ fi
 # --- WORKFLOW ---
 alias gflow="workflow"
 alias grs='grebase_squash'
+alias gbls='gbranches'
 alias nukem='nuke'
 
 # --- Git Basics ---
@@ -719,6 +720,23 @@ syncforce() {
             return 0
             ;;
     esac
+}
+
+repos=(
+  "https://github.com/rpchan44/git-bashrc.git"
+  # Add more repos here if needed
+)
+
+# Function: list branches for all repos in array
+gbranches() {
+  for repo in "${repos[@]}"; do
+    echo "Branches in $repo:"
+    git ls-remote --heads "$repo" \
+      | awk '{ print $2 }' \
+      | sed -e 's/\// /g' \
+      | awk '{ print $3 }'
+    echo
+  done
 }
 
 ghelp() { 

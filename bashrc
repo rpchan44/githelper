@@ -841,7 +841,7 @@ task() {
   select type in feat chore fix; do
     case $type in
       feat|chore|fix)
-        echo "Running final commit helper with task: $type"
+        echo "Task Selected: $type"
         process "$type"
         break
         ;;

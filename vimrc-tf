@@ -1,0 +1,21 @@
+" ===========================
+"   Terraform Vim Settings
+" ===========================
+
+filetype plugin indent on
+syntax on
+
+augroup terraform
+  autocmd!
+  " Detect Terraform files
+  autocmd BufRead,BufNewFile *.tf,*.tfvars set filetype=terraform
+  " Indentation: 2 spaces, no tabs
+  autocmd FileType terraform setlocal tabstop=2 shiftwidth=2 expandtab
+  " Highlight trailing spaces
+  autocmd FileType terraform match ErrorMsg '\s\+$'
+  " Enable folding by syntax
+  autocmd FileType terraform setlocal foldmethod=syntax
+  " Auto format with terraform fmt on save (if terraform is installed)
+  autocmd BufWritePost *.tf silent! !terraform fmt %:p
+augroup END
+

@@ -603,16 +603,21 @@ gacp() {
         git commit -m "$commit_msg"
     fi
 
+    # Rebase onto remote feature branch first (if it exists)
+    echo "Checking if origin/$branch exists..."
+    if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+        echo "Fetching latest origin/$branch..."
+        git fetch origin "$branch"
 
-    # Rebase onto remote feature branch first
-    echo "Fetching latest origin/$branch..."
-    git fetch origin "$branch"
+        echo "Rebasing $branch onto origin/$branch..."
+        git rebase "origin/$branch" || {
+            echo "Rebase onto origin/$branch failed. Resolve conflicts manually."
+            return 1
+        }
+    else
+        echo "Remote branch origin/$branch not found, skipping remote rebase."
+    fi
 
-    echo "Rebasing $branch onto origin/$branch..."
-    git rebase "origin/$branch" || {
-        echo "Rebase onto origin/$branch failed. Resolve conflicts manually."
-        return 1
-    }
 
     # Then rebase onto main
     echo "Rebasing the current branch to main..."

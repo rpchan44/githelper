@@ -618,7 +618,6 @@ gacp() {
         echo "Remote branch origin/$branch not found, skipping remote rebase."
     fi
 
-
     # Then rebase onto main
     echo "Rebasing the current branch to main..."
     grebase || {
@@ -626,13 +625,15 @@ gacp() {
         return 1
     }
 
-    # Push branch
+    # Push branch (create remote branch if missing)
     echo "Pushing branch: $branch"
-    git push -u origin "$branch"
+    if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+        git push origin "$branch"
+    else
+        echo "Remote branch not found, creating it..."
+        git push -u origin "$branch"
+    fi
 }
-
-
-
 
 gcb() {
     if command -v fzf &>/dev/null; then

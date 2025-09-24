@@ -6,7 +6,7 @@ if [ -f ~/.git-completion.bash ]; then
 fi
 # --- WORKFLOW ---
 alias gflow="workflow"
-alias grs='grebase_squash'
+alias makepr='grebase_squash'
 alias nukem='nuke'
 
 # --- Git Basics ---
@@ -794,7 +794,6 @@ githelp() {
     echo -e "\n\e[1;32m[ Branch Management ]\e[0m"
     echo -e "  \e[1;36mgman\e[0m      Branch Management"
     echo -e "  \e[1;36mgbsan\e[0m     Auto-remove + commit ignored files"
-    echo -e "  \e[1;36mgcomp\e[0m     Stage + Commit + Push (All-in-One)"
     echo -e "  \e[1;36mgco\e[0m       Checkout branch (with -p perform git pull and return to previous branch)"
     echo -e "  \e[1;36mgcb\e[0m       Interactive checkout"
     echo -e "  \e[1;36mpushforce\e[0m  Force push local branch to remote (overwrites remote)"
@@ -806,8 +805,7 @@ githelp() {
     echo -e "  \e[1;36mgcr\e[0m       Rebase last 5 commits interactively"
     echo -e "  \e[1;36mgra\e[0m       Abort rebase"
     echo -e "  \e[1;36mgrc\e[0m       Continue rebase"
-    echo -e "  \e[1;36mgrebase\e[0m   Rebase current branch onto main (or specified)"
-    echo -e "  \e[1;36mgrs\e[0m       Squash multiple commits, force push, then rebase onto main and commit via gcomp"
+    echo -e "  \e[1;36mmakepr\e[0m    Squash multiple commits, force push, then rebase onto your feature branch then rebase to main"
 
     echo -e "  \e[1;36mgundo\e[0m     Undo last commit (keep staged)"
     echo -e "  \e[1;36mgundoh\e[0m    Undo last commit (unstage changes)"

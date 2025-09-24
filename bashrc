@@ -461,10 +461,10 @@ gpatch_apply_all() {
         [ -f "$patch" ] || continue
         echo "Applying: $patch"
         if ! git apply "$patch"; then
-            echo "❌ Failed on patch: $patch"
+            echo "Failed on patch: $patch"
             return 1
         fi
-        echo "✅ Applied: $patch"
+        echo "Applied: $patch"
     done
     echo "All patches applied successfully."
 }

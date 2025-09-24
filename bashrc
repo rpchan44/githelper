@@ -599,9 +599,31 @@ gacp() {
 
     # Commit with type + env + ticket + message
     commit_msg="${type}: ${env}-${ticket}-${msg}"
-    echo "Committing: $commit_msg"
-    git commit -m "$commit_msg"
+    echo "Commit message will be: $commit_msg"
 
+    echo "Do you want to (n)ew commit or (a)mend last commit? [n/a]"
+    read -r choice
+
+    if [ "$choice" = "a" ]; then
+        echo "Amending last commit..."
+        git commit --amend -m "$commit_msg"
+    else
+        echo "Creating new commit..."
+        git commit -m "$commit_msg"
+    fi
+
+
+    # Rebase onto remote feature branch first
+    echo "Fetching latest origin/$branch..."
+    git fetch origin "$branch"
+
+    echo "Rebasing $branch onto origin/$branch..."
+    git rebase "origin/$branch" || {
+        echo "Rebase onto origin/$branch failed. Resolve conflicts manually."
+        return 1
+    }
+
+    # Then rebase onto main
     echo "Rebasing the current branch to main..."
     grebase || {
         echo "Rebase onto main failed. Resolve conflicts manually."

@@ -760,7 +760,7 @@ ghelp() {
 githelp() {
     echo -e "\n\e[1;32m Git Helper Commands\e[0m\n"
 
-    echo -e "\e[1;32m[ GitWork Flow (README) ]\e[0m"
+    echo -e "\e[1;32m[ Workflow ]\e[0m"
     echo -e "  \e[1;36mmakepr\e[0m    Squash multiple commits, then rebase onto your origin feature branch then rebase to origin main"
 
     echo -e "\n\e[1;32m[ Create / Status / Stage / Commit / Push ]\e[0m"

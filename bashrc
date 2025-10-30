@@ -62,7 +62,7 @@ alias newrepo='repo_create'
 # ================================
 cdmenu() {
     dirs=(*/)
-    [ ${#dirs[@]} -eq 0 ] && { echo "No subdirectories found"; return 1; }
+    [ ${#dirs[@]} -eq 0 ] && { echo "No subdirectories found"; return 0; }
     echo "Select a directory:"
     select d in "${dirs[@]}"; do
         [ -n "$d" ] && cd "$d" && break
@@ -71,74 +71,113 @@ cdmenu() {
 }
 
 # === Rename Git remote repo and optionally local folder ===
-
+# === setreponame — rename remote repository both locally and on GitHub ===
 reponame() {
-  local remote="${1:-origin}"
-  local new_url="$2"
 
-  if [[ -z "$new_url" ]]; then
-    echo "Usage: reponame [remote_name] <new_url>"
-    echo "Example: reponame origin https://github.com/newname/myrepo.git"
-    return 1
+  local remote="origin"
+  local new_name=""
+
+  # Parse arguments
+  if [[ $# -eq 1 ]]; then
+    new_name="$1"
+  elif [[ $# -eq 2 ]]; then
+    remote="$1"
+    new_name="$2"
+  else
+    cat <<'USAGE'
+Usage:
+  setreponame [remote] <new-repo-name>
+
+Examples:
+  setreponame origin ghelper
+  setreponame ghelper   # assumes 'origin' as remote
+USAGE
+    return 0
   fi
 
-  # Verify we are inside a Git repo
-  if ! git rev-parse --is-inside-work-tree &>/dev/null; then
-    echo "❌ Not inside a Git repository."
-    return 1
+  # Ensure inside a git repo
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "❌ Not inside a git repository."
+    return 0
   fi
 
-  echo "🔍 Checking current remote URL..."
-  local old_url
+  local old_url repo_full owner old_name
   old_url=$(git remote get-url "$remote" 2>/dev/null || true)
-
   if [[ -z "$old_url" ]]; then
     echo "❌ Remote '$remote' not found."
-    return 1
+    return 0
   fi
 
-  echo "Current remote: $old_url"
-  echo "New remote:     $new_url"
+  # --- Match GitHub-style URLs ---
+  if [[ "$old_url" =~ github\.com[:/](.+)/([^/]+?)(\.git)?$ ]]; then
+    owner="${BASH_REMATCH[1]}"
+    old_name="${BASH_REMATCH[2]}"
+    repo_full="${owner}/${old_name}"
+  else
+    echo "❌ Remote '$remote' does not point to a GitHub repo."
+    echo "Current URL: $old_url"
+    return 0
+  fi
+
+  echo "📦 Detected GitHub repo: $repo_full"
+  echo "🆕 Renaming to: ${owner}/${new_name}"
   echo
 
-  read -rp "Proceed with update? [y/N] " confirm
+  read -r -p "Proceed to rename GitHub repo '${old_name}' → '${new_name}'? [y/N] " confirm
   [[ "$confirm" =~ ^[Yy]$ ]] || { echo "Cancelled."; return 0; }
 
-  echo "🔄 Updating remote URL..."
+  if ! gh auth status >/dev/null 2>&1; then
+    echo "❌ GitHub CLI not authenticated. Run: gh auth login"
+    return 0
+  fi
+
+  echo "🔧 Renaming remote repo on GitHub..."
+  if ! gh repo rename "$new_name" --repo "$repo_full" >/dev/null; then
+    echo "❌ GitHub rename failed. (Do you own this repo?)"
+    return 0
+  fi
+  echo "✅ GitHub repository renamed successfully."
+
+  local new_url="https://github.com/${owner}/${new_name}.git"
+  echo "🔄 Updating local remote '$remote' URL → $new_url"
   git remote set-url "$remote" "$new_url"
 
-  echo "🔗 Verifying new URL..."
-  if git ls-remote "$remote" &>/dev/null; then
-    echo "✅ Connection OK."
-  else
-    echo "⚠️  Warning: could not verify remote (check credentials or URL)."
-  fi
-
-  # Suggest renaming the local folder if the repo name changed
-  local cur_dir new_dir
-  cur_dir="$(basename "$(pwd)")"
-  new_dir="$(basename -s .git "$new_url")"
-
-  if [[ "$cur_dir" != "$new_dir" ]]; then
-    echo
-    read -rp "Rename local folder from '$cur_dir' → '$new_dir'? [y/N] " rename_confirm
-    if [[ "$rename_confirm" =~ ^[Yy]$ ]]; then
-      local parent_dir
-      parent_dir="$(dirname "$(pwd)")"
-      cd "$parent_dir" || return 1
-      mv "$cur_dir" "$new_dir"
-      cd "$new_dir" || return 1
-      echo "📁 Renamed local directory to '$new_dir'."
-    else
-      echo "🟡 Keeping current folder name: '$cur_dir'"
-    fi
-  else
-    echo "📁 Local folder name already matches new repo name."
-  fi
-
-  echo "✅ All done!"
+  echo "📡 New remote list:"
   git remote -v
+
+  local branch
+  branch=$(git symbolic-ref --short HEAD 2>/dev/null || true)
+  if [[ -n "$branch" ]]; then
+    echo
+    read -r -p "Update upstream tracking for '$branch' to '$remote/$branch'? [y/N] " upconfirm
+    if [[ "$upconfirm" =~ ^[Yy]$ ]]; then
+      git branch --set-upstream-to="$remote/$branch" "$branch"
+      echo "✅ Upstream updated."
+    fi
+  fi
+
+  # --- Optional folder rename ---
+  local current_dir new_dir
+  current_dir=$(basename "$(pwd)")
+  new_dir="${new_name}"
+
+  if [[ "$current_dir" != "$new_dir" ]]; then
+    echo
+    read -r -p "Rename local folder '$current_dir' → '$new_dir'? [y/N] " dirconfirm
+    if [[ "$dirconfirm" =~ ^[Yy]$ ]]; then
+      local parent_dir
+      parent_dir=$(dirname "$(pwd)")
+      cd "$parent_dir"
+      mv "$current_dir" "$new_dir"
+      cd "$new_dir"
+      echo "📁 Folder renamed to '$new_dir'."
+    fi
+  fi
+
+  echo
+  echo "🎉 Done. Repository renamed on GitHub and synced locally."
 }
+
 
 # Convenient alias
 alias grename='rename_git_remote'
@@ -147,7 +186,7 @@ alias grename='rename_git_remote'
 #  Remote Repo Helpers
 # ================================
 setremote() {
-    [ $# -ne 2 ] && { echo "Usage: setremote <remote_name> <url>"; return 1; }
+    [ $# -ne 2 ] && { echo "Usage: setremote <remote_name> <url>"; return 0; }
     local remote_name=$1 url=$2
     if git remote get-url "$remote_name" &>/dev/null; then
         echo "Updating remote '$remote_name' to $url"
@@ -162,7 +201,7 @@ setremote() {
 pushup() {
     local remote_name=${1:-origin}
     local branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD)
-    [ -z "$branch" ] && { echo "Not on a branch"; return 1; }
+    [ -z "$branch" ] && { echo "Not on a branch"; return 0; }
     echo "Pushing branch '$branch' to remote '$remote_name'"
     git push -u "$remote_name" "$branch"
 }
@@ -192,7 +231,7 @@ gconflict() {
     # Check if VSCode is installed
     if ! command -v code &>/dev/null; then
         echo -e "\e[33mVSCode not found. Please install it to use this helper.\e[0m"
-        return 1
+        return 0
     fi
 
     # Get list of conflicted files
@@ -222,7 +261,7 @@ gsquash() {
     BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
     if [ -z "$BRANCH" ]; then
         echo -e "\e[33mNot on a branch.\e[0m"
-        return 1
+        return 0
     fi
 
     # Detect upstream/base branch automatically
@@ -239,7 +278,7 @@ gsquash() {
     BASE=$(git merge-base "$BRANCH" "$UPSTREAM")
     if [ -z "$BASE" ]; then
         echo -e "\e[33mCannot detect base commit between $BRANCH and $UPSTREAM\e[0m"
-        return 1
+        return 0
     fi
 
     # Detect unstaged/staged changes or untracked files
@@ -253,7 +292,7 @@ gsquash() {
     read -rp "Enter new commit message: " NEW_MSG
     if [ -z "$NEW_MSG" ]; then
         echo -e "\e[33mCommit message cannot be empty.\e[0m"
-        return 1
+        return 0
     fi
 
     echo -e "\e[36mSquashing all commits in branch '$BRANCH' into one since base '$UPSTREAM'...\e[0m"
@@ -311,7 +350,7 @@ gclean-branch() {
   current_branch=$(git branch --show-current 2>/dev/null || true)
   if [[ -z "$current_branch" ]]; then
     echo "Not in a Git repository or no branch detected."
-    return 1
+    return 0
   fi
 
   # Parse args
@@ -329,7 +368,7 @@ gclean-branch() {
     default_branch="master"
   else
     echo "No 'main' or 'master' branch found."
-    return 1
+    return 0
   fi
 
   # Already on main/master
@@ -401,7 +440,7 @@ gbclean() {
 gcpy() {
     if ! git rev-parse --show-toplevel &>/dev/null; then
         echo "Not inside a Git repository"
-        return 1
+        return 0
     fi
 
     local repo_root
@@ -410,7 +449,7 @@ gcpy() {
 
     if [[ $# -lt 2 ]]; then
         echo "Usage: gcpy <source...> <destination>"
-        return 1
+        return 0
     fi
 
     local dest="${@: -1}"
@@ -426,7 +465,7 @@ gcpy() {
             if [[ "$abs_src" != "$repo_root"/* ]]; then
                 echo "Blocked: '$f' is outside repo root"
                 shopt -u nocasematch
-                return 1
+                return 0
             fi
             shopt -u nocasematch
         done
@@ -440,7 +479,7 @@ gcpy() {
     if [[ "$abs_dest" != "$repo_root"/* ]]; then
         echo "Blocked: destination '$dest' is outside repo root"
         shopt -u nocasematch
-        return 1
+        return 0
     fi
     shopt -u nocasematch
 
@@ -457,19 +496,19 @@ gcpy() {
 # ================================
 gblame() {
     local file=$1
-    [ -z "$file" ] && { echo "Usage: gblame <file>"; return 1; }
+    [ -z "$file" ] && { echo "Usage: gblame <file>"; return 0; }
     git blame "$file"
 }
 
 gblame_line() {
     local file=$1 line=$2
-    [ -z "$file" ] || [ -z "$line" ] && { echo "Usage: gblame_line <file> <line>"; return 1; }
+    [ -z "$file" ] || [ -z "$line" ] && { echo "Usage: gblame_line <file> <line>"; return 0; }
     git blame -L "$line","$line" "$file"
 }
 
 gblame_show() {
     local file=$1 line=$2
-    [ -z "$file" ] || [ -z "$line" ] && { echo "Usage: gblame_show <file> <line>"; return 1; }
+    [ -z "$file" ] || [ -z "$line" ] && { echo "Usage: gblame_show <file> <line>"; return 0; }
     local commit=$(git blame -L "$line","$line" --porcelain "$file" | awk '/^commit/ {print $2}')
     echo " Commit for $file line $line: $commit"
     git show "$commit"
@@ -477,13 +516,13 @@ gblame_show() {
 
 gline_history() {
     local file=$1 line=$2
-    [ -z "$file" ] || [ -z "$line" ] && { echo "Usage: gline_history <file> <line>"; return 1; }
+    [ -z "$file" ] || [ -z "$line" ] && { echo "Usage: gline_history <file> <line>"; return 0; }
     git log -L "$line","$line":"$file"
 }
 
 gblame_recent() {
     local file=$1 count=${2:-5}
-    [ -z "$file" ] && { echo "Usage: gblame_recent <file> [N_commits]"; return 1; }
+    [ -z "$file" ] && { echo "Usage: gblame_recent <file> [N_commits]"; return 0; }
     local range="HEAD~$count..HEAD"
     echo " Blaming $file for last $count commits ($range)"
     git blame "$range" -- "$file"
@@ -496,7 +535,7 @@ repo_create() {
     repo_name=$1
     visibility=${2:-private}
 
-    [ -z "$repo_name" ] && { echo "Usage: newrepo <repo_name> [private|public]"; return 1; }
+    [ -z "$repo_name" ] && { echo "Usage: newrepo <repo_name> [private|public]"; return 0; }
 
     # Encode repo name for URL (basic encoding)
     repo_name_encoded=$(python -c "import urllib.parse; print(urllib.parse.quote('$repo_name'))")
@@ -520,7 +559,7 @@ repo_create() {
 
 remoteinfo() {
     branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD)
-    [ -z "$branch" ] && { echo "Not on a branch"; return 1; }
+    [ -z "$branch" ] && { echo "Not on a branch"; return 0; }
     echo -e "\n Current branch: $branch"
     upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null)
     [ -n "$upstream" ] && echo "Tracking upstream: $upstream" || echo "No upstream set for this branch"
@@ -574,13 +613,13 @@ gbmanage() {
         echo -e "  gman delete remote <branch>"
         echo -e "  gman rename local <old> <new>"
         echo -e "  gman rename remote <old> <new>"
-        return 1
+        return 0
     fi
 
     # Validate repo
     if ! git rev-parse --git-dir >/dev/null 2>&1; then
         echo -e "${RED}Not inside a Git repository.${RESET}"
-        return 1
+        return 0
     fi
 
     case "$action" in
@@ -597,7 +636,7 @@ gbmanage() {
                     ;;
                 *)
                     echo -e "${RED}Invalid target. Use 'local' or 'remote'.${RESET}"
-                    return 1
+                    return 0
                     ;;
             esac
             ;;
@@ -605,11 +644,11 @@ gbmanage() {
             if [[ "$target" == "local" ]]; then
                 if ! git show-ref --verify --quiet "refs/heads/$branch"; then
                     echo -e "${RED}Local branch '$branch' does not exist.${RESET}"
-                    return 1
+                    return 0
                 fi
                 if [[ "$(git rev-parse --abbrev-ref HEAD)" == "$branch" ]]; then
                     echo -e "${RED}You cannot delete the branch you are currently on.${RESET}"
-                    return 1
+                    return 0
                 fi
                 echo -e "${YELLOW}Delete local branch '$branch'? (y/N)${RESET}"
                 read -r ans
@@ -620,11 +659,11 @@ gbmanage() {
                 local remote=$(git remote | head -n1)
                 if [[ -z "$remote" ]]; then
                     echo -e "${RED}No remote configured.${RESET}"
-                    return 1
+                    return 0
                 fi
                 if ! git ls-remote --heads "$remote" "$branch" | grep -q .; then
                     echo -e "${RED}Remote branch '$branch' not found on '$remote'.${RESET}"
-                    return 1
+                    return 0
                 fi
                 echo -e "${YELLOW}Delete remote branch '$branch' from '$remote'? (y/N)${RESET}"
                 read -r ans
@@ -632,18 +671,18 @@ gbmanage() {
                     && echo -e "${GREEN}Deleted remote branch '$branch' from '$remote'.${RESET}"
             else
                 echo -e "${RED}Invalid target. Use 'local' or 'remote'.${RESET}"
-                return 1
+                return 0
             fi
             ;;
         rename)
             if [[ -z "$newname" ]]; then
                 echo -e "${RED}Missing new branch name.${RESET}"
-                return 1
+                return 0
             fi
             if [[ "$target" == "local" ]]; then
                 if ! git show-ref --verify --quiet "refs/heads/$branch"; then
                     echo -e "${RED}Local branch '$branch' does not exist.${RESET}"
-                    return 1
+                    return 0
                 fi
                 echo -e "${YELLOW}Rename local branch '$branch'  '$newname'? (y/N)${RESET}"
                 read -r ans
@@ -655,11 +694,11 @@ gbmanage() {
                 local remote=$(git remote | head -n1)
                 if [[ -z "$remote" ]]; then
                     echo -e "${RED}No remote configured.${RESET}"
-                    return 1
+                    return 0
                 fi
                 if ! git ls-remote --heads "$remote" "$branch" | grep -q .; then
                     echo -e "${RED}Remote branch '$branch' not found on '$remote'.${RESET}"
-                    return 1
+                    return 0
                 fi
                 echo -e "${YELLOW}Rename remote branch '$branch'  '$newname' on '$remote'? (y/N)${RESET}"
                 read -r ans
@@ -670,12 +709,12 @@ gbmanage() {
                 fi
             else
                 echo -e "${RED}Invalid target. Use 'local' or 'remote'.${RESET}"
-                return 1
+                return 0
             fi
             ;;
         *)
             echo -e "${RED}Invalid action. Use 'list', 'delete' or 'rename'.${RESET}"
-            return 1
+            return 0
             ;;
     esac
 }
@@ -728,13 +767,13 @@ gco() {
     while [[ "$1" == -* ]]; do
         case "$1" in
             -p) flag_p=1 ;;
-            *) echo "Unknown option $1"; return 1 ;;
+            *) echo "Unknown option $1"; return 0 ;;
         esac
         shift
     done
 
     branch="$1"
-    [ -z "$branch" ] && { echo "Usage: gco [-p] <branch>"; return 1; }
+    [ -z "$branch" ] && { echo "Usage: gco [-p] <branch>"; return 0; }
 
     # Save current branch
     local current_branch
@@ -747,12 +786,12 @@ gco() {
 
     if [[ $flag_p -eq 1 ]]; then
         # Checkout target branch, pull, then return
-        git checkout "$branch" || return 1
-        git pull || return 1
-        git checkout "$current_branch" || return 1
+        git checkout "$branch" || return 0
+        git pull || return 0
+        git checkout "$current_branch" || return 0
         echo "Pulled '$branch' and returned to '$current_branch'"
     else
-        git checkout "$branch" || return 1
+        git checkout "$branch" || return 0
     fi
 }
 process() {
@@ -763,7 +802,7 @@ process() {
     branch=$(git symbolic-ref --short HEAD 2>/dev/null)
     if [ -z "$branch" ]; then
         echo "Not on a branch"
-        return 1
+        return 0
     fi
 
     # Expected format: type/env/ticket
@@ -781,14 +820,14 @@ process() {
         1) task="feat" ;;
         2) task="chore" ;;
         3) task="fix" ;;
-        *) echo "Invalid choice"; return 1 ;;
+        *) echo "Invalid choice"; return 0 ;;
     esac
     echo "Task Selected: $task"
 
     # Prompt for commit message
     echo "Enter commit message:"
     read -r msg
-    [ -z "$msg" ] && { echo "Commit message cannot be empty"; return 1; }
+    [ -z "$msg" ] && { echo "Commit message cannot be empty"; return 0; }
 
     # Detect Terraform repo
     if git ls-files -- '*.tf' | grep -q '\.tf$' || [ -f "terraform.lock.hcl" ]; then
@@ -796,7 +835,7 @@ process() {
         echo "Running terraform fmt..."
         terraform fmt
         echo "Validating Terraform..."
-        terraform validate || { echo "Terraform validation failed"; return 1; }
+        terraform validate || { echo "Terraform validation failed"; return 0; }
     fi
 
     # Stage all files
@@ -826,7 +865,7 @@ process() {
         echo -e "${RED}Rebasing $branch onto $feature_branch...${NC}"
         git rebase "$feature_branch" || {
             echo "Rebase onto $feature_branch failed. Resolve conflicts manually."
-            return 1
+            return 0
         }
     else
         echo "No remote feature branch found. Skipping feature rebase."
@@ -836,7 +875,7 @@ process() {
     echo -e "${RED}Rebasing $branch onto origin/main...${NC}"
     git rebase origin/main || {
         echo "Rebase onto origin/main failed. Resolve conflicts manually."
-        return 1
+        return 0
     }
 
     # Push branch (try force-with-lease, fallback to force)
@@ -845,7 +884,7 @@ process() {
         echo "Force-with-lease failed, falling back to force push..."
         git push --force origin "$branch" || {
             echo "Push failed completely. Resolve issues manually."
-            return 1
+            return 0
         }
     }
 
@@ -861,7 +900,7 @@ gc_branch_prefix() {
     branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD)
     if [ -z "$branch" ]; then
         echo "Not on a branch"
-        return 1
+        return 0
     fi
 
     # Extract prefix and ticket
@@ -875,7 +914,7 @@ gc_branch_prefix() {
 
     if [ $# -eq 0 ]; then
         echo "Usage: gcp <commit message>"
-        return 1
+        return 0
     fi
 
     git commit -m "$commit_prefix$*"
@@ -890,15 +929,15 @@ grebase() {
     local branch
     branch=$(git symbolic-ref --short HEAD 2>/dev/null)
 
-    [ -z "$branch" ] && { echo "Not on a branch"; return 1; }
+    [ -z "$branch" ] && { echo "Not on a branch"; return 0; }
 
     echo "You are on branch '$branch'."
     echo "Do you want to rebase '$branch' onto 'origin/$target'? [y/N]"
     read -r answer
     case "$answer" in
         [Yy]* )
-            git fetch origin || { echo "Failed to fetch"; return 1; }
-            git rebase "origin/$target" || { echo "Rebase failed"; return 1; }
+            git fetch origin || { echo "Failed to fetch"; return 0; }
+            git rebase "origin/$target" || { echo "Rebase failed"; return 0; }
             echo "Rebased '$branch' onto 'origin/$target'"
             ;;
         * )
@@ -913,7 +952,7 @@ pushforce() {
     local remote_name=${1:-origin}
     local branch
     branch=$(git symbolic-ref --short HEAD 2>/dev/null)
-    [ -z "$branch" ] && { echo "Not on a branch"; return 1; }
+    [ -z "$branch" ] && { echo "Not on a branch"; return 0; }
 
     echo " WARNING: This will overwrite remote branch '$branch' on '$remote_name'"
     echo "Do you want to continue? [y/N]"
@@ -922,7 +961,7 @@ pushforce() {
         [Yy]* )
             git push "$remote_name" "$branch" --force-with-lease || {
                 echo "Force push failed"
-                return 1
+                return 0
             }
             echo " Force-pushed '$branch' to '$remote_name'"
             ;;
@@ -938,15 +977,15 @@ syncforce() {
     local remote_name=${1:-origin}
     local branch
     branch=$(git symbolic-ref --short HEAD 2>/dev/null)
-    [ -z "$branch" ] && { echo "Not on a branch"; return 1; }
+    [ -z "$branch" ] && { echo "Not on a branch"; return 0; }
 
     echo " WARNING: This will overwrite your local branch '$branch' to match '$remote_name/$branch'"
     echo "Do you want to continue? [y/N]"
     read -r answer
     case "$answer" in
         [Yy]* )
-            git fetch "$remote_name" || { echo "Fetch failed"; return 1; }
-            git reset --hard "$remote_name/$branch" || { echo "Reset failed"; return 1; }
+            git fetch "$remote_name" || { echo "Fetch failed"; return 0; }
+            git reset --hard "$remote_name/$branch" || { echo "Reset failed"; return 0; }
             echo " Local branch '$branch' synced to '$remote_name/$branch'"
             ;;
         * )

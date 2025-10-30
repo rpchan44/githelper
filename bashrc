@@ -1,16 +1,13 @@
 # ================================
 #  Git Bash Helper Aliases & Functions
 # ================================
-if [ -f ~/.git-completion.bash ]; then
-        . ~/.git-completion.bash
-fi
 # --- WORKFLOW ---
 alias makepr='process'
 alias preppr='gsquash'
 alias cfrs='gconflict'
 alias scf='show_conflict'
 alias nuke='duke_nukem'
-
+alias setreponame='reponame'
 # --- Git Basics ---
 alias gbn='gnew'
 alias gbs='echo Branch Status; git status'
@@ -35,6 +32,7 @@ alias gblr='gblame_recent'  # blame last N commits
 
 
 # --- Branch Management ---
+alias gclean="gclean-branch"
 alias gbc="echo Cloning Repository; git clone "
 alias gman='gbmanage'
 alias gbsan='gbclean'
@@ -71,6 +69,79 @@ cdmenu() {
         echo "Invalid choice"
     done
 }
+
+# === Rename Git remote repo and optionally local folder ===
+
+reponame() {
+  local remote="${1:-origin}"
+  local new_url="$2"
+
+  if [[ -z "$new_url" ]]; then
+    echo "Usage: reponame [remote_name] <new_url>"
+    echo "Example: reponame origin https://github.com/newname/myrepo.git"
+    return 1
+  fi
+
+  # Verify we are inside a Git repo
+  if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+    echo "❌ Not inside a Git repository."
+    return 1
+  fi
+
+  echo "🔍 Checking current remote URL..."
+  local old_url
+  old_url=$(git remote get-url "$remote" 2>/dev/null || true)
+
+  if [[ -z "$old_url" ]]; then
+    echo "❌ Remote '$remote' not found."
+    return 1
+  fi
+
+  echo "Current remote: $old_url"
+  echo "New remote:     $new_url"
+  echo
+
+  read -rp "Proceed with update? [y/N] " confirm
+  [[ "$confirm" =~ ^[Yy]$ ]] || { echo "Cancelled."; return 0; }
+
+  echo "🔄 Updating remote URL..."
+  git remote set-url "$remote" "$new_url"
+
+  echo "🔗 Verifying new URL..."
+  if git ls-remote "$remote" &>/dev/null; then
+    echo "✅ Connection OK."
+  else
+    echo "⚠️  Warning: could not verify remote (check credentials or URL)."
+  fi
+
+  # Suggest renaming the local folder if the repo name changed
+  local cur_dir new_dir
+  cur_dir="$(basename "$(pwd)")"
+  new_dir="$(basename -s .git "$new_url")"
+
+  if [[ "$cur_dir" != "$new_dir" ]]; then
+    echo
+    read -rp "Rename local folder from '$cur_dir' → '$new_dir'? [y/N] " rename_confirm
+    if [[ "$rename_confirm" =~ ^[Yy]$ ]]; then
+      local parent_dir
+      parent_dir="$(dirname "$(pwd)")"
+      cd "$parent_dir" || return 1
+      mv "$cur_dir" "$new_dir"
+      cd "$new_dir" || return 1
+      echo "📁 Renamed local directory to '$new_dir'."
+    else
+      echo "🟡 Keeping current folder name: '$cur_dir'"
+    fi
+  else
+    echo "📁 Local folder name already matches new repo name."
+  fi
+
+  echo "✅ All done!"
+  git remote -v
+}
+
+# Convenient alias
+alias grename='rename_git_remote'
 
 # ================================
 #  Remote Repo Helpers
@@ -198,6 +269,109 @@ gsquash() {
 
     # Red success message
     echo -e "\e[31mBranch '$BRANCH' successfully squashed and pushed!\e[0m"
+}
+
+#
+# Usage:
+#   gclean-branch                # detect current branch, switch to main, ask before delete
+#   gclean-branch --force        # same but force delete (even if unmerged, still asks)
+#   gclean-branch --remote       # also delete from remote (with confirmation)
+#   gclean-branch --force --remote  # force delete both locally and remotely (with confirmation)
+#
+# Description:
+#   This helper checks your current Git branch.
+#   If it’s not 'main' or 'master', it switches to the default branch
+#   and asks before deleting the old one.
+#   If --force is passed, it uses 'git branch -D' instead of '-d'.
+#   If --remote is passed, it will also confirm before deleting the remote branch.
+#
+# Examples:
+#   gclean-branch
+#   gclean-branch --force
+#   gclean-branch --remote
+#
+# Notes:
+#   Works with ghelp documentation system.
+
+gclean-branch() {
+  set -euo pipefail
+
+  local current_branch
+  local delete_flag="-d"
+  local delete_remote=false
+  local default_branch
+
+  # Help output for ghelp
+  if [[ "${1:-}" == "help" || "${1:-}" == "-h" ]]; then
+    declare -f gclean-branch | sed -n 's/^# //p'
+    return 0
+  fi
+
+  # Detect current branch
+  current_branch=$(git branch --show-current 2>/dev/null || true)
+  if [[ -z "$current_branch" ]]; then
+    echo "Not in a Git repository or no branch detected."
+    return 1
+  fi
+
+  # Parse args
+  for arg in "$@"; do
+    case "$arg" in
+      --force) delete_flag="-D" ;;
+      --remote) delete_remote=true ;;
+    esac
+  done
+
+  # Detect main or master
+  if git show-ref --quiet refs/heads/main; then
+    default_branch="main"
+  elif git show-ref --quiet refs/heads/master; then
+    default_branch="master"
+  else
+    echo "No 'main' or 'master' branch found."
+    return 1
+  fi
+
+  # Already on main/master
+  if [[ "$current_branch" == "$default_branch" ]]; then
+    echo "Already on '$default_branch', nothing to delete."
+    return 0
+  fi
+
+  echo "Current branch: $current_branch"
+  echo "Switching to '$default_branch'..."
+  git switch "$default_branch"
+  echo "Perform pulling on '$default_branch'..."
+  git pull
+  echo
+  read -rp "Delete local branch '$current_branch'? [y/N]: " confirm_local
+  if [[ ! "$confirm_local" =~ ^[Yy]$ ]]; then
+    echo "Local branch deletion cancelled."
+    return 0
+  fi
+
+  echo "Deleting local branch '$current_branch'..."
+  git branch $delete_flag "$current_branch"
+
+  # Remote delete (optional)
+  if [[ "$delete_remote" == true ]]; then
+    echo
+    if git ls-remote --exit-code origin "refs/heads/$current_branch" &>/dev/null; then
+      read -rp "Delete remote branch 'origin/$current_branch'? [y/N]: " confirm_remote
+      if [[ "$confirm_remote" =~ ^[Yy]$ ]]; then
+        echo "Deleting remote branch..."
+        git push origin --delete "$current_branch"
+        echo "Remote branch 'origin/$current_branch' deleted."
+      else
+        echo "Remote branch deletion cancelled."
+      fi
+    else
+      echo "No remote branch found for '$current_branch'."
+    fi
+  fi
+
+  echo "Branch '$current_branch' cleaned up successfully."
+  return 0
 }
 
 # ================================
@@ -520,7 +694,7 @@ gnew() {
         # -o means raw branch name (no prefix, no env)
         if [ $# -ne 1 ]; then
             echo "Usage: gbn -o <branch-name>"
-            return 1
+            return 0
         fi
         branch="$1"
     else
@@ -531,7 +705,7 @@ gnew() {
             echo "  gbn feat dev HELP-123     # -> feat/dev/HELP-123"
             echo "  gbn bugfix prd HELP-123   # -> bugfix/prd/HELP-123"
             echo "  gbn -o HELP-123           # -> HELP-123 (no prefix/env)"
-            return 1
+            return 0
         fi
         prefix="$1"
         env="$2"
@@ -823,6 +997,7 @@ githelp() {
 
     echo -e "\n\e[1;32m[ Branch Management ]\e[0m"
     echo -e "  \e[1;36mgman\e[0m              Branch Management"
+    echo -e "  \e[1;36mgclean\e[0m            Auto remove feature local and remote (--remote) branch"
     echo -e "  \e[1;36mgbsan\e[0m             Auto-remove + commit ignored files"
     echo -e "  \e[1;36mgco\e[0m               Checkout branch (with -p perform git pull and return to previous branch)"
     echo -e "  \e[1;36mpushforce\e[0m         Force push local branch to remote (overwrites remote)"
@@ -849,6 +1024,7 @@ githelp() {
     echo -e "  \e[1;36mgcpy\e[0m              Copying files/asset within the branch"
     
     echo -e "\n\e[1;32m[ Remote / Upstream Helper ]\e[0m"
+    echo -e "  \e[1;36msetreponame\e[0m       Rename Remote Repository"
     echo -e "  \e[1;36msetremote\e[0m         Add or update a remote URL"
     echo -e "  \e[1;36mpushup\e[0m            Push current branch and set upstream"
     echo -e "  \e[1;36mnewrepo\e[0m           Create GitHub repository"
@@ -864,6 +1040,7 @@ duke_nukem() {
     case "$answer" in
         [Yy]* )
 	    git checkout --orphan temp_branch && git add -A && git commit -m "Initial commit" && git branch -D main && git branch -m main && git push -f origin main
+	    git branch --set-upstream-to=origin/main main
 	    echo "Done.... I hope you like it :)"
             ;;
         * )
@@ -879,3 +1056,5 @@ cd "$REPO" 2>/dev/null
 cdmenu
 echo "ghelp - for additional helper functions"
 
+
+complete -C C:\WINDOWS\system32\terraform.exe terraform

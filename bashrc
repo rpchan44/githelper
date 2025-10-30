@@ -108,13 +108,13 @@ USAGE
     return 0
   fi
 
-  # --- Match GitHub-style URLs ---
-  if [[ "$old_url" =~ github\.com[:/](.+)/([^/]+?)(\.git)?$ ]]; then
-    owner="${BASH_REMATCH[1]}"
-    old_name="${BASH_REMATCH[2]}"
+  # --- Match GitHub-style URLs (HTTPS or SSH) ---
+  if [[ "$old_url" =~ ^(https://|git@)github\.com[:/]+([^/]+)/([^/.]+)(\.git)?$ ]]; then
+    owner="${BASH_REMATCH[2]}"
+    old_name="${BASH_REMATCH[3]}"
     repo_full="${owner}/${old_name}"
   else
-    echo "❌ Remote '$remote' does not point to a GitHub repo."
+    echo "❌ Remote '$remote' does not point to a recognizable GitHub URL."
     echo "Current URL: $old_url"
     return 0
   fi

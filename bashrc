@@ -89,8 +89,8 @@ Usage:
   setreponame [remote] <new-repo-name>
 
 Examples:
-  setreponame origin ghelper
-  setreponame ghelper   # assumes 'origin' as remote
+  setreponame origin mynewrepositoryname
+  setreponame mynewrepositoryname   # assumes 'origin' as remote
 USAGE
     return 0
   fi

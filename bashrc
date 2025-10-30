@@ -957,7 +957,7 @@ syncforce() {
 }
 
 ghelp() { 
-	githelp | less -RPs'[Press q to quit help] '
+	githelp
 }
 # ================================
 #  Colored Git Helper Menu
